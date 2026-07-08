@@ -40,8 +40,6 @@ const DEFAULT_CONCEPT_CATEGORIES = [
 
 
 // --- ELEMENTOS DEL DOM ---
-const warningBanner = document.getElementById('warning-banner');
-const closeBannerBtn = document.getElementById('close-banner-btn');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 
 // Elementos de Auth
@@ -102,15 +100,12 @@ const btnClearConfirm = document.getElementById('btn-clear-confirm');
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Configurar Banner de Advertencia
-    initWarningBanner();
-    
-    // 2. Configurar selector de fecha (valor por defecto: hoy, max: hoy)
+    // 1. Configurar selector de fecha (valor por defecto: hoy, max: hoy)
     const todayStr = getTodayString();
     inputDate.value = todayStr;
     inputDate.max = todayStr;
     
-    // 3. Configurar manejadores de eventos
+    // 2. Configurar manejadores de eventos
     setupEventListeners();
 });
 
@@ -215,14 +210,7 @@ async function saveTransactions() {
     }
 }
 
-function initWarningBanner() {
-    const isDismissed = localStorage.getItem('warning-banner-dismissed');
-    if (isDismissed === 'true') {
-        warningBanner.style.display = 'none';
-    } else {
-        warningBanner.style.display = 'flex';
-    }
-}
+
 
 function initFilters() {
     const now = new Date();
@@ -267,12 +255,6 @@ function populateYearFilter(defaultYear) {
 // --- EVENT LISTENERS ---
 
 function setupEventListeners() {
-    // Banner de advertencia
-    closeBannerBtn.addEventListener('click', () => {
-        warningBanner.style.display = 'none';
-        localStorage.setItem('warning-banner-dismissed', 'true');
-    });
-    
     // Cambio de tema
     themeToggleBtn.addEventListener('click', toggleTheme);
     
@@ -825,11 +807,9 @@ function confirmDeleteTransaction() {
 function executeClearData() {
     transactions = [];
     saveTransactions();
-    localStorage.removeItem('warning-banner-dismissed');
     
     // Restablecer filtros
     initFilters();
-    initWarningBanner();
     
     closeModal(modalClear);
     showToast('Todos los datos han sido borrados.', 'success');
