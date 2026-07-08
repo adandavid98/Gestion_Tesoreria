@@ -1,10 +1,17 @@
-/**
- * Lógica de la aplicación web Tesorería Juvenil
- * Desarrollado con JavaScript Vanilla (ES6+)
- */
+import { firebaseConfig } from './config.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Inicializar Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
 
 // --- ESTADO DE LA APLICACIÓN ---
 let transactions = [];
+let currentUser = null;
 let selectedTransactionIdToDelete = null;
 let parsedCsvTransactionsToImport = [];
 let editingTransactionId = null;
@@ -36,6 +43,15 @@ const DEFAULT_CONCEPT_CATEGORIES = [
 const warningBanner = document.getElementById('warning-banner');
 const closeBannerBtn = document.getElementById('close-banner-btn');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
+
+// Elementos de Auth
+const loginSection = document.getElementById('login-section');
+const dashboardContainer = document.getElementById('dashboard-container');
+const btnLoginGoogle = document.getElementById('btn-login-google');
+const btnLogout = document.getElementById('btn-logout');
+const userProfile = document.getElementById('user-profile');
+const userPhoto = document.getElementById('user-photo');
+const userName = document.getElementById('user-name');
 
 // Formulario
 const transactionForm = document.getElementById('transaction-form');
@@ -86,30 +102,59 @@ const btnClearConfirm = document.getElementById('btn-clear-confirm');
 
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Cargar datos del localStorage
-    loadTransactions();
-    
-    // 2. Configurar Banner de Advertencia
+    // 1. Configurar Banner de Advertencia
     initWarningBanner();
     
-    // 3. Configurar selector de fecha (valor por defecto: hoy, max: hoy)
+    // 2. Configurar selector de fecha (valor por defecto: hoy, max: hoy)
     const todayStr = getTodayString();
     inputDate.value = todayStr;
     inputDate.max = todayStr;
     
-    // 4. Configurar filtros de mes y año
-    initFilters();
-    
-    // 5. Configurar manejadores de eventos
+    // 3. Configurar manejadores de eventos
     setupEventListeners();
-    
-    // 6. Primera renderización de la interfaz
-    render();
+});
+
+// --- ESCUCHAR ESTADO DE AUTENTICACIÓN ---
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        currentUser = user;
+        
+        // Actualizar perfil de la barra superior
+        if (userPhoto) userPhoto.src = user.photoURL || 'https://lh3.googleusercontent.com/a/default-user=s96-c';
+        if (userName) userName.textContent = user.displayName || user.email;
+        if (userProfile) userProfile.classList.remove('hidden-element');
+        
+        // Mostrar dashboard y ocultar login
+        loginSection.classList.add('hidden-element');
+        dashboardContainer.classList.remove('hidden-element');
+        
+        // Cargar transacciones
+        await loadTransactions();
+        
+        // Configurar filtros basándose en las transacciones cargadas
+        initFilters();
+        
+        // Renderizar interfaz
+        render();
+    } else {
+        currentUser = null;
+        transactions = [];
+        
+        // Ocultar perfil
+        if (userProfile) userProfile.classList.add('hidden-element');
+        
+        // Mostrar login, ocultar dashboard
+        loginSection.classList.remove('hidden-element');
+        dashboardContainer.classList.add('hidden-element');
+        
+        render();
+    }
 });
 
 // --- FUNCIONES DE PERSISTENCIA Y CARGA ---
 
-function loadTransactions() {
+async function loadTransactions() {
+    // 1. Intentar cargar localmente primero para visualización rápida
     try {
         const stored = localStorage.getItem('transacciones');
         if (stored) {
@@ -120,16 +165,53 @@ function loadTransactions() {
     } catch (e) {
         console.error('Error cargando transacciones desde localStorage', e);
         transactions = [];
-        showToast('Error al leer datos guardados.', 'error');
+    }
+    
+    // 2. Si hay sesión iniciada en la nube, sincronizar con Firestore
+    if (currentUser && db) {
+        try {
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const docSnap = await getDoc(userDocRef);
+            
+            if (docSnap.exists()) {
+                const cloudData = docSnap.data().transactions || [];
+                transactions = cloudData;
+                // Actualizar caché local
+                localStorage.setItem('transacciones', JSON.stringify(transactions));
+            } else {
+                // Si no hay datos en la nube pero sí locales, subirlos (migración automática)
+                if (transactions.length > 0) {
+                    showToast('Sincronizando tus datos locales con la nube...', 'info');
+                    await saveTransactions();
+                }
+            }
+        } catch (error) {
+            console.error("Error al cargar de Firestore: ", error);
+            showToast('Error al cargar datos en la nube. Usando copia local.', 'warning');
+        }
     }
 }
 
-function saveTransactions() {
+async function saveTransactions() {
+    // 1. Guardar localmente siempre como copia de respaldo
     try {
         localStorage.setItem('transacciones', JSON.stringify(transactions));
     } catch (e) {
         console.error('Error guardando transacciones en localStorage', e);
-        showToast('Error al guardar los datos localmente. El almacenamiento podría estar lleno.', 'error');
+    }
+    
+    // 2. Guardar en la nube si está autenticado
+    if (currentUser && db) {
+        try {
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            await setDoc(userDocRef, {
+                transactions: transactions,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        } catch (error) {
+            console.error("Error al guardar en Firestore: ", error);
+            showToast('Error al guardar datos en la nube.', 'error');
+        }
     }
 }
 
@@ -250,6 +332,31 @@ function setupEventListeners() {
             if (modal) closeModal(modal);
         });
     });
+    
+    // Autenticación con Google
+    if (btnLoginGoogle) {
+        btnLoginGoogle.addEventListener('click', async () => {
+            try {
+                await signInWithPopup(auth, googleProvider);
+            } catch (error) {
+                console.error("Error al iniciar sesión: ", error);
+                showToast('Error al iniciar sesión con Google.', 'error');
+            }
+        });
+    }
+    
+    // Cerrar sesión
+    if (btnLogout) {
+        btnLogout.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                showToast('Sesión cerrada correctamente.', 'info');
+            } catch (error) {
+                console.error("Error al cerrar sesión: ", error);
+                showToast('Error al cerrar sesión.', 'error');
+            }
+        });
+    }
 }
 
 // --- LOGICA DE CAMBIO DE TEMA ---
