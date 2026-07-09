@@ -38,6 +38,18 @@ const DEFAULT_CONCEPT_CATEGORIES = [
     { concepto: "Artículos de limpieza", categoria: "Mantenimiento" }
 ];
 
+const KEYWORD_CATEGORY_RULES = [
+    { keywords: ["ofrenda", "donacion", "diezmo", "donar", "contribucion"], categoria: "Ofrenda" },
+    { keywords: ["microfono", "cable", "sonido", "audio", "bocina", "consola", "parlante", "audifono", "parlantes"], categoria: "Equipo de sonido" },
+    { keywords: ["alquiler", "renta", "local", "salon", "sillas", "mesa", "mesas"], categoria: "Alquiler" },
+    { keywords: ["refrigerio", "pizza", "refresco", "comida", "vasos", "platos", "cena", "almuerzo", "pan", "pastel", "gaseosa"], categoria: "Refrigerios" },
+    { keywords: ["impresion", "fotocopia", "folleto", "papel", "cuaderno", "lapicero", "tinta", "lapiz", "hoja", "hojas"], categoria: "Papelería" },
+    { keywords: ["gasolina", "transporte", "autobus", "pasaje", "viaje", "taxi", "combustible", "flete", "peaje"], categoria: "Transporte" },
+    { keywords: ["campamento", "retiro", "inscripcion", "evento", "conferencia"], categoria: "Campamento" },
+    { keywords: ["niños", "escuela dominical", "didactico", "juguetes", "clase", "materiales"], categoria: "Escuela dominical" },
+    { keywords: ["limpieza", "mantenimiento", "escoba", "jabon", "reparacion", "pintura", "desinfectante", "cloro"], categoria: "Mantenimiento" }
+];
+
 
 // --- ELEMENTOS DEL DOM ---
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -114,6 +126,9 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
         
+        // Remover clase de vista de login en el body
+        document.body.classList.remove('login-view');
+        
         // Actualizar perfil de la barra superior
         if (userPhoto) userPhoto.src = user.photoURL || 'https://lh3.googleusercontent.com/a/default-user=s96-c';
         if (userName) userName.textContent = user.displayName || user.email;
@@ -134,6 +149,9 @@ onAuthStateChanged(auth, async (user) => {
     } else {
         currentUser = null;
         transactions = [];
+        
+        // Agregar clase de vista de login en el body
+        document.body.classList.add('login-view');
         
         // Ocultar perfil
         if (userProfile) userProfile.classList.add('hidden-element');
@@ -435,15 +453,29 @@ function handleConceptInput() {
         if (bestMatch) {
             inputCategory.value = bestMatch.categoria;
         } else {
-            // Intentar detectar si el término ingresado coincide con el nombre de alguna categoría conocida
-            const knownCategories = new Set(uniqueConcepts.map(item => item.categoria));
-            const matchedCategory = Array.from(knownCategories).find(cat => 
-                valNorm.includes(normalizeText(cat)) || normalizeText(cat).includes(valNorm)
-            );
-            if (matchedCategory && valNorm.length >= 3) {
-                inputCategory.value = matchedCategory;
+            // Intentar detectar coincidencia por palabras clave (keywords)
+            let matchedCategoryByKeyword = null;
+            for (const rule of KEYWORD_CATEGORY_RULES) {
+                const found = rule.keywords.some(kw => valNorm.includes(normalizeText(kw)));
+                if (found) {
+                    matchedCategoryByKeyword = rule.categoria;
+                    break;
+                }
+            }
+
+            if (matchedCategoryByKeyword) {
+                inputCategory.value = matchedCategoryByKeyword;
             } else {
-                inputCategory.value = '';
+                // Intentar detectar si el término ingresado coincide con el nombre de alguna categoría conocida
+                const knownCategories = new Set(uniqueConcepts.map(item => item.categoria));
+                const matchedCategory = Array.from(knownCategories).find(cat => 
+                    valNorm.includes(normalizeText(cat)) || normalizeText(cat).includes(valNorm)
+                );
+                if (matchedCategory && valNorm.length >= 3) {
+                    inputCategory.value = matchedCategory;
+                } else {
+                    inputCategory.value = '';
+                }
             }
         }
     }

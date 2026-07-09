@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tesorería Juvenil - Control de Ingresos y Gastos</title>
+    <title>Income Manage - Control de Ingresos y Gastos</title>
     <meta name="description" content="Registra ingresos y gastos de tu grupo juvenil, genera reportes mensuales y exporta respaldos en CSV. Sin cuentas, sin servidores.">
     
     <!-- Google Fonts: Poppins -->
@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=9">
     
     <!-- Script para evitar destellos de tema claro en modo oscuro -->
     <script>
@@ -25,7 +25,7 @@
         })();
     </script>
 </head>
-<body>
+<body class="login-view">
     <div class="app-container">
 
 
@@ -38,12 +38,24 @@
                     </svg>
                 </div>
                 <div class="logo-text">
-                    <h1>Tesorería Juvenil</h1>
-                    <p>Control de ingresos y gastos del grupo</p>
+                    <h1>Income Manage</h1>
+                    <p>Gestión de ingresos para la tesorería juvenil</p>
                 </div>
             </div>
             
             <div class="header-right-actions">
+                <!-- Selector de Idioma (Traducción) -->
+                <div class="translation-control">
+                    <div class="lang-icon">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                    </div>
+                    <div id="google_translate_element" class="google-translate-wrapper"></div>
+                </div>
+                
                 <!-- Perfil de usuario (oculto por defecto) -->
                 <div id="user-profile" class="user-profile hidden-element">
                     <img id="user-photo" src="" alt="Foto de perfil">
@@ -72,12 +84,15 @@
         <!-- Pantalla de Login (Google Sign-In) -->
         <section id="login-section" class="login-section">
             <div class="login-card">
-                <div class="login-logo-icon">
-                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 21h18M5 21V8l7-4 7 4v13M12 8v5M10 13h4M12 11h.01M9 21v-4a3 3 0 016 0v4"/>
-                    </svg>
+                <div class="login-card-header">
+                    <div class="login-logo-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 21h18M5 21V8l7-4 7 4v13M12 8v5M10 13h4M12 11h.01M9 21v-4a3 3 0 016 0v4"/>
+                        </svg>
+                    </div>
+                    <span class="login-brand-name">Income Manage</span>
                 </div>
-                <h2>Tesorería Juvenil</h2>
+                <h2>Gestione sus ingresos y gastos</h2>
                 <p>Accede de forma segura y sincroniza tus transacciones en la nube desde cualquier dispositivo.</p>
                 
                 <button id="btn-login-google" class="btn-google">
@@ -91,7 +106,7 @@
                 </button>
                 
                 <div class="login-footer">
-                    <span>Herramienta gratuita para el control de ingresos y gastos de iglesias.</span>
+                    <span>Herramienta de gestionamiento de ingresos</span>
                 </div>
             </div>
         </section>
@@ -288,7 +303,7 @@
 
         <!-- Footer -->
         <footer class="main-footer">
-            <p>Herramienta gratuita para grupos juveniles</p>
+            <p>Herramienta de gestionamiento de ingresos</p>
         </footer>
     </div>
 
@@ -364,6 +379,18 @@
     <!-- Contenedor para impresión de Reporte PDF -->
     <div id="print-report-container" class="print-only"></div>
 
+    <!-- Script de Inicialización de Google Translate -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'es',
+                includedLanguages: 'es,en,fr,pt,it,de',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     <script type="module" src="app.js"></script>
 </body>
 </html>
