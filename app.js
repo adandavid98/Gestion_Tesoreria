@@ -907,7 +907,6 @@ function downloadFullBackup() {
     showToast('Respaldo completo exportado con éxito.', 'success');
 }
 
-// 3. Generar Reporte Mensual (PDF/Impresión)
 // 3. Generar Reporte Mensual/Anual (PDF/Impresión)
 function downloadMonthlyReport() {
     const isAllMonths = filterMonth.value === 'all';
@@ -1085,8 +1084,6 @@ function downloadMonthlyReport() {
     });
     const balance = totalIncome - totalExpense;
     
-    // Construir estructura del reporte para el contenedor de impresión
-    const printContainer = document.getElementById('print-report-container');
     const dateToday = getTodayString().split('-').reverse().join('/');
     
     let tableRows = '';
@@ -1098,7 +1095,7 @@ function downloadMonthlyReport() {
                 <td>${t.concepto}</td>
                 <td><span class="print-badge print-badge-${t.tipo}">${isIncome ? trans.income : trans.expense}</span></td>
                 <td>${t.categoria || '-'}</td>
-                <td class="${isIncome ? 'print-td-income' : 'print-td-expense'} text-right">
+                <td class="${isIncome ? 'print-td-income' : 'print-td-expense'}" style="text-align:right;">
                     ${isIncome ? '+' : '-'} ${formatCurrency(t.monto).replace('RD$', 'RD$ ')}
                 </td>
             </tr>
@@ -1109,62 +1106,203 @@ function downloadMonthlyReport() {
     const periodText = isAllMonths ? `${trans.period}: ${selYear}` : `${trans.months[selMonth]} ${selYear}`;
     const balanceLabel = isAllMonths ? trans.annualBalance : trans.monthlyBalance;
     
-    printContainer.innerHTML = `
-        <div class="print-report-wrapper">
-            <div class="print-report-header">
-                <div class="print-report-header-left">
-                    <h1>${reportTitle}</h1>
-                    <p>${trans.subtitle}</p>
-                </div>
-                <div class="print-report-header-right">
-                    <div class="print-date">${isAllMonths ? periodText : `${trans.period}: ${periodText}`}</div>
-                    <div class="print-subtitle">${trans.generated}: ${dateToday}</div>
-                </div>
-            </div>
-            
-            <div class="print-summary-grid">
-                <div class="print-summary-card print-card-income">
-                    <h3>${trans.totalIncome}</h3>
-                    <div class="amount">${formatCurrency(totalIncome).replace('RD$', 'RD$ ')}</div>
-                </div>
-                <div class="print-summary-card print-card-expense">
-                    <h3>${trans.totalExpense}</h3>
-                    <div class="amount">${formatCurrency(totalExpense).replace('RD$', 'RD$ ')}</div>
-                </div>
-                <div class="print-summary-card print-card-balance">
-                    <h3>${balanceLabel}</h3>
-                    <div class="amount">${formatCurrency(balance).replace('RD$', 'RD$ ')}</div>
-                </div>
-            </div>
-            
-            <div class="print-section-title">${trans.transactionsTitle}</div>
-            <table class="print-table">
-                <thead>
-                    <tr>
-                        <th>${trans.date}</th>
-                        <th>${trans.concept}</th>
-                        <th>${trans.type}</th>
-                        <th>${trans.category}</th>
-                        <th class="text-right">${trans.amount}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${tableRows}
-                </tbody>
-            </table>
-            
-            <div class="print-report-footer">
-                <p>${trans.footer}</p>
-            </div>
+    // Construir documento HTML completo con estilos en línea (independiente de la página principal)
+    const reportHTML = `<!DOCTYPE html>
+<html lang="${currentLang}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${reportTitle}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            padding: 20px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .print-report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #000000;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .print-report-header h1 {
+            font-size: 20pt;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .print-report-header p {
+            font-size: 10pt;
+            color: #555555;
+        }
+        .print-report-header-right {
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .print-date {
+            font-size: 12pt;
+            font-weight: 600;
+        }
+        .print-subtitle {
+            font-size: 9pt;
+            color: #666666;
+            margin-top: 4px;
+        }
+        .print-summary-grid {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .print-summary-card {
+            flex: 1;
+            border: 1px solid #dddddd;
+            padding: 12px;
+            border-radius: 6px;
+            background-color: #fafafa;
+        }
+        .print-summary-card h3 {
+            font-size: 9pt;
+            color: #555555;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .print-summary-card .amount {
+            font-size: 14pt;
+            font-weight: 700;
+        }
+        .print-card-income .amount { color: #00875a; }
+        .print-card-expense .amount { color: #de350b; }
+        .print-card-balance .amount { color: #0052cc; }
+        .print-section-title {
+            font-size: 14pt;
+            font-weight: 600;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #dddddd;
+            padding-bottom: 5px;
+        }
+        .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .print-table th,
+        .print-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #dddddd;
+            font-size: 10pt;
+            text-align: left;
+        }
+        .print-table th {
+            font-weight: 600;
+            background-color: #f0f0f0;
+        }
+        .print-badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 8pt;
+            font-weight: 600;
+            text-transform: uppercase;
+            border: 1px solid #cccccc;
+        }
+        .print-badge-ingreso { background-color: #e3fcef; color: #006644; border-color: #abf5d1; }
+        .print-badge-gasto { background-color: #ffebe6; color: #bf2600; border-color: #ffbdad; }
+        .print-td-income { color: #006644; font-weight: 600; }
+        .print-td-expense { color: #bf2600; font-weight: 600; }
+        .print-report-footer {
+            border-top: 1px dashed #cccccc;
+            padding-top: 15px;
+            text-align: center;
+            font-size: 8pt;
+            color: #777777;
+            margin-top: 40px;
+        }
+        @media print {
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-report-header">
+        <div class="print-report-header-left">
+            <h1>${reportTitle}</h1>
+            <p>${trans.subtitle}</p>
         </div>
-    `;
+        <div class="print-report-header-right">
+            <div class="print-date">${isAllMonths ? periodText : `${trans.period}: ${periodText}`}</div>
+            <div class="print-subtitle">${trans.generated}: ${dateToday}</div>
+        </div>
+    </div>
     
-    // Lanzar diálogo de impresión de forma asíncrona para permitir la renderización previa
-    setTimeout(() => {
-        window.print();
-    }, 150);
+    <div class="print-summary-grid">
+        <div class="print-summary-card print-card-income">
+            <h3>${trans.totalIncome}</h3>
+            <div class="amount">${formatCurrency(totalIncome).replace('RD$', 'RD$ ')}</div>
+        </div>
+        <div class="print-summary-card print-card-expense">
+            <h3>${trans.totalExpense}</h3>
+            <div class="amount">${formatCurrency(totalExpense).replace('RD$', 'RD$ ')}</div>
+        </div>
+        <div class="print-summary-card print-card-balance">
+            <h3>${balanceLabel}</h3>
+            <div class="amount">${formatCurrency(balance).replace('RD$', 'RD$ ')}</div>
+        </div>
+    </div>
     
-    showToast('Diálogo de impresión (PDF) abierto.', 'success');
+    <div class="print-section-title">${trans.transactionsTitle}</div>
+    <table class="print-table">
+        <thead>
+            <tr>
+                <th>${trans.date}</th>
+                <th>${trans.concept}</th>
+                <th>${trans.type}</th>
+                <th>${trans.category}</th>
+                <th style="text-align:right;">${trans.amount}</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${tableRows}
+        </tbody>
+    </table>
+    
+    <div class="print-report-footer">
+        <p>${trans.footer}</p>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 400);
+        };
+    </script>
+</body>
+</html>`;
+    
+    // Abrir ventana nueva con el reporte completo (funciona en PC y móvil)
+    const reportWindow = window.open('', '_blank');
+    if (reportWindow) {
+        reportWindow.document.write(reportHTML);
+        reportWindow.document.close();
+        showToast('Reporte generado. Se abrió en una nueva pestaña.', 'success');
+    } else {
+        // Fallback si el navegador bloquea pop-ups: usar Blob URL
+        const blob = new Blob([reportHTML], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast('Reporte generado. Si no se abrió, permite las ventanas emergentes.', 'info');
+    }
 }
 
 // 4. Importar Respaldo (Selección y Parseo)
