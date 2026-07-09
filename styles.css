@@ -1103,6 +1103,16 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* --- ESTILOS DE IMPRESIÓN --- */
 @media print {
+    html, body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        position: static !important;
+        display: block !important;
+    }
+
     /* Ocultar interfaz web principal */
     .app-container,
     .modal-overlay,
@@ -1113,12 +1123,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     /* Mostrar contenedor de reporte */
     #print-report-container {
         display: block !important;
-    }
-    
-    #print-report-container {
-        position: absolute;
-        left: 0;
-        top: 0;
+        position: relative !important;
         width: 100%;
         color: #000000 !important;
         background-color: #ffffff !important;

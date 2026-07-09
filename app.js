@@ -357,6 +357,14 @@ function setupEventListeners() {
             }
         });
     }
+    
+    // Limpiar el contenedor de impresión después de imprimir (crucial para móviles)
+    window.addEventListener('afterprint', () => {
+        const printContainer = document.getElementById('print-report-container');
+        if (printContainer) {
+            printContainer.innerHTML = '';
+        }
+    });
 }
 
 // --- LOGICA DE CAMBIO DE TEMA ---
@@ -1162,9 +1170,7 @@ function downloadMonthlyReport() {
     // Lanzar diálogo de impresión de forma asíncrona para permitir la renderización previa
     setTimeout(() => {
         window.print();
-        // Limpiar el contenedor después de imprimir
-        printContainer.innerHTML = '';
-    }, 100);
+    }, 150);
     
     showToast('Diálogo de impresión (PDF) abierto.', 'success');
 }
