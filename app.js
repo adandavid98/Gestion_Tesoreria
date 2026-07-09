@@ -1106,8 +1106,13 @@ function downloadMonthlyReport() {
     const periodText = isAllMonths ? `${trans.period}: ${selYear}` : `${trans.months[selMonth]} ${selYear}`;
     const balanceLabel = isAllMonths ? trans.annualBalance : trans.monthlyBalance;
     
-    // Construir documento HTML completo con estilos en línea (independiente de la página principal)
-    const reportHTML = `<!DOCTYPE html>
+    // Detectar si es dispositivo móvil
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+                     || (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
+    
+    if (isMobile) {
+        // === MÓVIL: Abrir ventana nueva con documento HTML completo e independiente ===
+        const reportHTML = `<!DOCTYPE html>
 <html lang="${currentLang}">
 <head>
     <meta charset="UTF-8">
@@ -1285,23 +1290,83 @@ function downloadMonthlyReport() {
     </script>
 </body>
 </html>`;
-    
-    // Abrir ventana nueva con el reporte completo (funciona en PC y móvil)
-    const reportWindow = window.open('', '_blank');
-    if (reportWindow) {
-        reportWindow.document.write(reportHTML);
-        reportWindow.document.close();
-        showToast('Reporte generado. Se abrió en una nueva pestaña.', 'success');
+        
+        const reportWindow = window.open('', '_blank');
+        if (reportWindow) {
+            reportWindow.document.write(reportHTML);
+            reportWindow.document.close();
+            showToast('Reporte generado. Se abrió en una nueva pestaña.', 'success');
+        } else {
+            // Fallback si el navegador bloquea pop-ups
+            const blob = new Blob([reportHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.click();
+            URL.revokeObjectURL(url);
+            showToast('Reporte generado. Si no se abrió, permite las ventanas emergentes.', 'info');
+        }
+        
     } else {
-        // Fallback si el navegador bloquea pop-ups: usar Blob URL
-        const blob = new Blob([reportHTML], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.target = '_blank';
-        link.click();
-        URL.revokeObjectURL(url);
-        showToast('Reporte generado. Si no se abrió, permite las ventanas emergentes.', 'info');
+        // === PC/ESCRITORIO: Método original directo con window.print() ===
+        const printContainer = document.getElementById('print-report-container');
+        printContainer.innerHTML = `
+            <div class="print-report-wrapper">
+                <div class="print-report-header">
+                    <div class="print-report-header-left">
+                        <h1>${reportTitle}</h1>
+                        <p>${trans.subtitle}</p>
+                    </div>
+                    <div class="print-report-header-right">
+                        <div class="print-date">${isAllMonths ? periodText : `${trans.period}: ${periodText}`}</div>
+                        <div class="print-subtitle">${trans.generated}: ${dateToday}</div>
+                    </div>
+                </div>
+                
+                <div class="print-summary-grid">
+                    <div class="print-summary-card print-card-income">
+                        <h3>${trans.totalIncome}</h3>
+                        <div class="amount">${formatCurrency(totalIncome).replace('RD$', 'RD$ ')}</div>
+                    </div>
+                    <div class="print-summary-card print-card-expense">
+                        <h3>${trans.totalExpense}</h3>
+                        <div class="amount">${formatCurrency(totalExpense).replace('RD$', 'RD$ ')}</div>
+                    </div>
+                    <div class="print-summary-card print-card-balance">
+                        <h3>${balanceLabel}</h3>
+                        <div class="amount">${formatCurrency(balance).replace('RD$', 'RD$ ')}</div>
+                    </div>
+                </div>
+                
+                <div class="print-section-title">${trans.transactionsTitle}</div>
+                <table class="print-table">
+                    <thead>
+                        <tr>
+                            <th>${trans.date}</th>
+                            <th>${trans.concept}</th>
+                            <th>${trans.type}</th>
+                            <th>${trans.category}</th>
+                            <th class="text-right">${trans.amount}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+                
+                <div class="print-report-footer">
+                    <p>${trans.footer}</p>
+                </div>
+            </div>
+        `;
+        
+        setTimeout(() => {
+            window.print();
+            printContainer.innerHTML = '';
+        }, 100);
+        
+        showToast('Diálogo de impresión (PDF) abierto.', 'success');
     }
 }
 
