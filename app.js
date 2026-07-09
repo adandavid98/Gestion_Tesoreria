@@ -895,10 +895,152 @@ function downloadMonthlyReport() {
     const isAllMonths = filterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(filterMonth.value);
     const selYear = parseInt(filterYear.value);
-    const monthNames = [
-        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
+    
+    // Obtener idioma actual del navegador / Google Translate
+    const currentLang = (document.documentElement.lang || 'es').split('-')[0].toLowerCase();
+    
+    const translations = {
+        es: {
+            noTransactionsYear: 'No hay transacciones registradas para este año.',
+            noTransactionsMonth: 'No hay transacciones registradas para este mes.',
+            annualReport: 'Reporte Anual de Tesorería',
+            monthlyReport: 'Reporte Mensual de Tesorería',
+            subtitle: 'Detalle de ingresos y gastos de la tesorería juvenil',
+            period: 'Período',
+            generated: 'Generado el',
+            totalIncome: 'Total Ingresos',
+            totalExpense: 'Total Gastos',
+            annualBalance: 'Saldo del Año',
+            monthlyBalance: 'Saldo del Mes',
+            date: 'Fecha',
+            concept: 'Concepto',
+            type: 'Tipo',
+            category: 'Categoría',
+            amount: 'Monto',
+            income: 'Ingreso',
+            expense: 'Gasto',
+            footer: 'Reporte de Tesorería Juvenil oficial - Generado de forma local y privada.',
+            transactionsTitle: 'Transacciones del período',
+            months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+        },
+        en: {
+            noTransactionsYear: 'No transactions recorded for this year.',
+            noTransactionsMonth: 'No transactions recorded for this month.',
+            annualReport: 'Annual Treasury Report',
+            monthlyReport: 'Monthly Treasury Report',
+            subtitle: 'Detail of income and expenses of the youth treasury',
+            period: 'Period',
+            generated: 'Generated on',
+            totalIncome: 'Total Income',
+            totalExpense: 'Total Expenses',
+            annualBalance: 'Year Balance',
+            monthlyBalance: 'Month Balance',
+            date: 'Date',
+            concept: 'Concept',
+            type: 'Type',
+            category: 'Category',
+            amount: 'Amount',
+            income: 'Income',
+            expense: 'Expense',
+            footer: 'Official Youth Treasury Report - Generated locally and privately.',
+            transactionsTitle: 'Transactions of the period',
+            months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        },
+        fr: {
+            noTransactionsYear: 'Aucune transaction enregistrée pour cette année.',
+            noTransactionsMonth: 'Aucune transaction enregistrée pour ce mois.',
+            annualReport: 'Rapport Annuel de la Trésorerie',
+            monthlyReport: 'Rapport Mensuel de la Trésorerie',
+            subtitle: 'Détail des revenus et dépenses de la trésorerie des jeunes',
+            period: 'Période',
+            generated: 'Généré le',
+            totalIncome: 'Total des Revenus',
+            totalExpense: 'Total des Dépenses',
+            annualBalance: 'Solde de l\'Année',
+            monthlyBalance: 'Solde du Mois',
+            date: 'Date',
+            concept: 'Concept',
+            type: 'Type',
+            category: 'Catégorie',
+            amount: 'Montant',
+            income: 'Revenu',
+            expense: 'Dépense',
+            footer: 'Rapport officiel de la trésorerie des jeunes - Généré localement et en privé.',
+            transactionsTitle: 'Transactions de la période',
+            months: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+        },
+        pt: {
+            noTransactionsYear: 'Nenhuma transação registrada para este ano.',
+            noTransactionsMonth: 'Nenhuma transação registrada para este mês.',
+            annualReport: 'Relatório Anual de Tesouraria',
+            monthlyReport: 'Relatório Mensal de Tesouraria',
+            subtitle: 'Detalhamento de receitas e despesas da tesouraria juvenil',
+            period: 'Período',
+            generated: 'Gerado em',
+            totalIncome: 'Total de Receitas',
+            totalExpense: 'Total de Despesas',
+            annualBalance: 'Saldo do Ano',
+            monthlyBalance: 'Saldo do Mês',
+            date: 'Data',
+            concept: 'Conceito',
+            type: 'Tipo',
+            category: 'Categoria',
+            amount: 'Valor',
+            income: 'Receita',
+            expense: 'Despesa',
+            footer: 'Relatório Oficial da Tesouraria Juvenil - Gerado localmente e de forma privada.',
+            transactionsTitle: 'Transações do período',
+            months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        },
+        it: {
+            noTransactionsYear: 'Nessuna transazione registrata per quest\'anno.',
+            noTransactionsMonth: 'Nessuna transazione registrata per questo mese.',
+            annualReport: 'Rapporto Generale di Tesoreria',
+            monthlyReport: 'Rapporto Mensile di Tesoreria',
+            subtitle: 'Dettaglio delle entrate e delle uscite della tesoreria giovanile',
+            period: 'Periodo',
+            generated: 'Generato il',
+            totalIncome: 'Totale Entrate',
+            totalExpense: 'Totale Spese',
+            annualBalance: 'Saldo dell\'Anno',
+            monthlyBalance: 'Saldo del Mese',
+            date: 'Data',
+            concept: 'Concetto',
+            type: 'Tipo',
+            category: 'Categoria',
+            amount: 'Importo',
+            income: 'Entrata',
+            expense: 'Spesa',
+            footer: 'Rapporto Ufficiale della Tesoreria Giovanile - Generato localmente e privatamente.',
+            transactionsTitle: 'Transazioni del periodo',
+            months: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+        },
+        de: {
+            noTransactionsYear: 'Für dieses Jahr wurden keine Transaktionen erfasst.',
+            noTransactionsMonth: 'Für diesen Monat wurden keine Transaktionen erfasst.',
+            annualReport: 'Jährlicher Kassenbericht',
+            monthlyReport: 'Monatlicher Kassenbericht',
+            subtitle: 'Details zu Einnahmen und Ausgaben der Jugendkasse',
+            period: 'Zeitraum',
+            generated: 'Generiert am',
+            totalIncome: 'Gesamteinnahmen',
+            totalExpense: 'Gesamtausgaben',
+            annualBalance: 'Jahressaldo',
+            monthlyBalance: 'Monatssaldo',
+            date: 'Datum',
+            concept: 'Konzept',
+            type: 'Typ',
+            category: 'Kategorie',
+            amount: 'Betrag',
+            income: 'Einnahme',
+            expense: 'Ausgabe',
+            footer: 'Offizieller Bericht der Jugendkasse - Lokal und privat generiert.',
+            transactionsTitle: 'Transaktionen des Zeitraums',
+            months: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+        }
+    };
+
+    const trans = translations[currentLang] || translations.es;
     
     // Filtrar y ordenar
     const filtered = transactions.filter(t => {
@@ -908,7 +1050,7 @@ function downloadMonthlyReport() {
     });
     
     if (filtered.length === 0) {
-        showToast(isAllMonths ? 'No hay transacciones registradas para este año.' : 'No hay transacciones registradas para este mes.', 'error');
+        showToast(isAllMonths ? trans.noTransactionsYear : trans.noTransactionsMonth, 'error');
         return;
     }
     
@@ -936,7 +1078,7 @@ function downloadMonthlyReport() {
             <tr>
                 <td>${formatDateString(t.fecha)}</td>
                 <td>${t.concepto}</td>
-                <td><span class="print-badge print-badge-${t.tipo}">${isIncome ? 'Ingreso' : 'Gasto'}</span></td>
+                <td><span class="print-badge print-badge-${t.tipo}">${isIncome ? trans.income : trans.expense}</span></td>
                 <td>${t.categoria || '-'}</td>
                 <td class="${isIncome ? 'print-td-income' : 'print-td-expense'} text-right">
                     ${isIncome ? '+' : '-'} ${formatCurrency(t.monto).replace('RD$', 'RD$ ')}
@@ -945,30 +1087,30 @@ function downloadMonthlyReport() {
         `;
     });
     
-    const reportTitle = isAllMonths ? 'Reporte Anual de Tesorería' : 'Reporte Mensual de Tesorería';
-    const periodText = isAllMonths ? `Año ${selYear}` : `${monthNames[selMonth]} ${selYear}`;
-    const balanceLabel = isAllMonths ? 'Saldo del Año' : 'Saldo del Mes';
+    const reportTitle = isAllMonths ? trans.annualReport : trans.monthlyReport;
+    const periodText = isAllMonths ? `${trans.period}: ${selYear}` : `${trans.months[selMonth]} ${selYear}`;
+    const balanceLabel = isAllMonths ? trans.annualBalance : trans.monthlyBalance;
     
     printContainer.innerHTML = `
         <div class="print-report-wrapper">
             <div class="print-report-header">
                 <div class="print-report-header-left">
                     <h1>${reportTitle}</h1>
-                    <p>Detalle de ingresos y gastos de la tesorería juvenil</p>
+                    <p>${trans.subtitle}</p>
                 </div>
                 <div class="print-report-header-right">
-                    <div class="print-date">Período: ${periodText}</div>
-                    <div class="print-subtitle">Generado el: ${dateToday}</div>
+                    <div class="print-date">${isAllMonths ? periodText : `${trans.period}: ${periodText}`}</div>
+                    <div class="print-subtitle">${trans.generated}: ${dateToday}</div>
                 </div>
             </div>
             
             <div class="print-summary-grid">
                 <div class="print-summary-card print-card-income">
-                    <h3>Total Ingresos</h3>
+                    <h3>${trans.totalIncome}</h3>
                     <div class="amount">${formatCurrency(totalIncome).replace('RD$', 'RD$ ')}</div>
                 </div>
                 <div class="print-summary-card print-card-expense">
-                    <h3>Total Gastos</h3>
+                    <h3>${trans.totalExpense}</h3>
                     <div class="amount">${formatCurrency(totalExpense).replace('RD$', 'RD$ ')}</div>
                 </div>
                 <div class="print-summary-card print-card-balance">
@@ -977,15 +1119,15 @@ function downloadMonthlyReport() {
                 </div>
             </div>
             
-            <div class="print-section-title">Transacciones del período</div>
+            <div class="print-section-title">${trans.transactionsTitle}</div>
             <table class="print-table">
                 <thead>
                     <tr>
-                        <th>Fecha</th>
-                        <th>Concepto</th>
-                        <th>Tipo</th>
-                        <th>Categoría</th>
-                        <th class="text-right">Monto</th>
+                        <th>${trans.date}</th>
+                        <th>${trans.concept}</th>
+                        <th>${trans.type}</th>
+                        <th>${trans.category}</th>
+                        <th class="text-right">${trans.amount}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -994,7 +1136,7 @@ function downloadMonthlyReport() {
             </table>
             
             <div class="print-report-footer">
-                <p>Reporte de Tesorería Juvenil oficial - Generado de forma local y privada.</p>
+                <p>${trans.footer}</p>
             </div>
         </div>
     `;
