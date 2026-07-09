@@ -1101,6 +1101,10 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     to { transform: translateY(0); opacity: 1; }
 }
 
+.print-only {
+    display: none;
+}
+
 /* --- ESTILOS DE IMPRESIÓN --- */
 @media print {
     html, body {
@@ -1121,7 +1125,8 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     }
     
     /* Mostrar contenedor de reporte */
-    #print-report-container {
+    #print-report-container,
+    .print-only {
         display: block !important;
         position: relative !important;
         width: 100%;

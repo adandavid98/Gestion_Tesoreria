@@ -357,14 +357,6 @@ function setupEventListeners() {
             }
         });
     }
-    
-    // Limpiar el contenedor de impresión después de imprimir (crucial para móviles)
-    window.addEventListener('afterprint', () => {
-        const printContainer = document.getElementById('print-report-container');
-        if (printContainer) {
-            printContainer.innerHTML = '';
-        }
-    });
 }
 
 // --- LOGICA DE CAMBIO DE TEMA ---
