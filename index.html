@@ -242,7 +242,7 @@
 
         <!-- Listado de Transacciones -->
         <section class="section-card table-section">
-            <h2>Transacciones del mes</h2>
+            <h2 id="label-transactions-title">Transacciones del mes</h2>
             <div class="table-responsive">
                 <table id="transactions-table">
                     <thead>
@@ -262,7 +262,7 @@
             </div>
             <!-- Estado vacío -->
             <div id="empty-state" class="empty-state">
-                <p>No hay transacciones registradas para este mes.</p>
+                <p id="label-empty-state">No hay transacciones registradas para este mes.</p>
             </div>
         </section>
 
@@ -274,7 +274,7 @@
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                     </svg>
-                    Generar reporte mensual
+                    <span id="label-report-btn">Generar reporte mensual</span>
                 </button>
                 <button id="btn-export-backup" class="btn-outline">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">

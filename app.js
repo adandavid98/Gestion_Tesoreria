@@ -555,6 +555,24 @@ function render() {
     if (labelBalanceEl) {
         labelBalanceEl.textContent = isAllMonths ? 'Saldo del año' : 'Saldo del mes';
     }
+
+    // Actualizar título de la sección de transacciones
+    const labelTransactionsTitleEl = document.getElementById('label-transactions-title');
+    if (labelTransactionsTitleEl) {
+        labelTransactionsTitleEl.textContent = isAllMonths ? 'Transacciones del año' : 'Transacciones del mes';
+    }
+    
+    // Actualizar párrafo de estado vacío
+    const labelEmptyStateEl = document.getElementById('label-empty-state');
+    if (labelEmptyStateEl) {
+        labelEmptyStateEl.textContent = isAllMonths ? 'No hay transacciones registradas para este año.' : 'No hay transacciones registradas para este mes.';
+    }
+    
+    // Actualizar texto del botón de reporte
+    const labelReportBtnEl = document.getElementById('label-report-btn');
+    if (labelReportBtnEl) {
+        labelReportBtnEl.textContent = isAllMonths ? 'Generar reporte anual' : 'Generar reporte mensual';
+    }
     
     // Modificar clases del saldo según su valor (opcional, siempre azul pero da feedback)
     if (totalBalance < 0) {
