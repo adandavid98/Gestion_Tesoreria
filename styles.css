@@ -151,6 +151,24 @@ body {
     display: flex;
     align-items: center;
     gap: 16px;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 6px 12px;
+    margin: -6px -12px;
+    border-radius: var(--radius-sm);
+    user-select: none;
+}
+
+.header-logo:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+html:not(.dark) .header-logo:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.header-logo:active {
+    transform: scale(0.98);
 }
 
 .logo-icon {
@@ -1255,4 +1273,508 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
         color: #777777;
         margin-top: 40px;
     }
+}
+
+/* --- ESTILOS DEL MENÚ PRINCIPAL --- */
+.menu-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 120px);
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.menu-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.menu-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.menu-header p {
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    width: 100%;
+}
+
+.menu-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding: 40px 30px;
+    border-radius: var(--radius-lg);
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    width: 100%;
+}
+
+/* Card Glow Effects */
+.card-glow-green::before,
+.card-glow-purple::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    transition: var(--transition);
+}
+
+.card-glow-green::before { background: linear-gradient(90deg, #10b981, #3b82f6); }
+.card-glow-purple::before { background: linear-gradient(90deg, #8b5cf6, #ec4899); }
+
+.menu-card-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 70px;
+    height: 70px;
+    border-radius: var(--radius-md);
+    margin-bottom: 24px;
+    transition: var(--transition);
+}
+
+.card-glow-green .menu-card-icon-wrapper {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.card-glow-purple .menu-card-icon-wrapper {
+    background-color: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+.menu-card-info h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-color);
+}
+
+.menu-card-info p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.menu-card-arrow {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--border-color);
+    color: var(--text-color);
+    transition: var(--transition);
+    opacity: 0.7;
+}
+
+/* Hover effects */
+.menu-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-lg);
+}
+
+.card-glow-green:hover {
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 15px 30px -5px rgba(16, 185, 129, 0.15), var(--shadow-lg);
+}
+
+.card-glow-purple:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: 0 15px 30px -5px rgba(139, 92, 246, 0.15), var(--shadow-lg);
+}
+
+.menu-card:hover .menu-card-arrow {
+    opacity: 1;
+    transform: translateX(5px);
+    background-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.menu-card:hover .menu-card-icon-wrapper {
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .menu-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .menu-section {
+        justify-content: flex-start;
+        padding-top: 40px;
+    }
+}
+
+/* --- ESTILOS BOTÓN VOLVER EN HEADER --- */
+.btn-back-to-menu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-right: 12px;
+}
+
+.btn-back-to-menu:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* --- ESTILOS MÓDULO FINANZAS PERSONALES --- */
+.personal-finances-container {
+    animation: fadeIn 0.4s ease-out;
+    width: 100%;
+}
+
+.pf-content-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.pf-form-section {
+    width: 100%;
+}
+
+.pf-expense-form {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.pf-expense-form .form-group {
+    margin-bottom: 0;
+}
+
+.budget-input-wrapper {
+    display: flex;
+    align-items: center;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0 10px;
+    height: 42px;
+    transition: var(--transition);
+    width: 100%;
+}
+
+.budget-input-wrapper:focus-within {
+    border-color: var(--input-focus);
+    box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.pf-budget-input {
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: 1.15rem;
+    font-weight: 700;
+    width: 100%;
+    padding: 0 5px;
+    outline: none;
+}
+
+.currency-symbol {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.pf-expenses-columns {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.pf-column-card {
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pf-column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+}
+
+.pf-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.pf-badge-fixed {
+    background-color: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+.pf-badge-variable {
+    background-color: rgba(236, 72, 153, 0.1);
+    color: #ec4899;
+}
+
+.pf-expense-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Items de Gastos */
+.pf-expense-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.pf-expense-item:hover {
+    border-color: var(--text-muted);
+    transform: translateX(3px);
+}
+
+.pf-item-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pf-item-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.pf-item-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.pf-item-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.pf-item-amount {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+/* Botones de Pago */
+.btn-payment-state {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: var(--transition);
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Verde: Pagar (Pendiente) */
+.btn-state-unpaid {
+    background-color: #10b981;
+    color: #ffffff;
+}
+.btn-state-unpaid:hover {
+    background-color: #059669;
+}
+
+/* Rojo: Pagado */
+.btn-state-paid {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+.btn-state-paid:hover {
+    background-color: #dc2626;
+}
+
+.btn-delete-item {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-delete-item:hover {
+    color: #ef4444;
+    transform: scale(1.1);
+}
+
+.btn-edit-item {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-edit-item:hover {
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.card-pending-expense {
+    border-left: 4px solid #f59e0b;
+}
+
+.orange-text { color: #f59e0b; }
+.red-text { color: #ef4444; }
+.green-text { color: #10b981; }
+.blue-text { color: #3b82f6; }
+
+@media (max-width: 900px) {
+    .pf-expense-form {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .pf-expense-form .form-group-btn {
+        margin-top: 10px;
+    }
+    .pf-expenses-columns {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .pf-charts-grid, .t-charts-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px;
+    }
+}
+
+/* --- PANEL DE CATEGORÍAS PERSONALIZABLES --- */
+.color-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.color-circle:hover {
+    transform: scale(1.15);
+}
+.color-circle.selected {
+    border-color: var(--text-color);
+    transform: scale(1.1);
+}
+
+.category-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.category-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.category-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.category-item-name {
+    font-size: 9.5pt;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.category-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-cat-action {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.btn-cat-action:hover {
+    color: var(--primary-color);
+    background-color: var(--bg-hover);
+}
+
+.btn-cat-delete:hover {
+    color: #ef4444;
 }
