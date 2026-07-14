@@ -1,4 +1,4 @@
-/* --- SISTEMA DE DISEÑO & VARIABLES --- */
+/* --- SISTEMA DE DISE�O & VARIABLES --- */
 :root {
     --font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     
@@ -276,7 +276,7 @@ html:not(.dark) .header-logo:hover {
     font-weight: 600;
 }
 
-/* Adaptación a la pantalla de login (fondo translúcido) */
+/* Adaptaci�n a la pantalla de login (fondo transl�cido) */
 body.login-view .translate-trigger-btn {
     background-color: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.1);
@@ -323,12 +323,12 @@ body.login-view .translate-trigger-btn .dropdown-chevron {
     color: rgba(255, 255, 255, 0.6);
 }
 
-/* Rotación del chevron cuando el menú está abierto */
+/* Rotaci�n del chevron cuando el men� est� abierto */
 .custom-translate-dropdown.active .dropdown-chevron {
     transform: rotate(180deg);
 }
 
-/* Menú de opciones desplegable */
+/* Men� de opciones desplegable */
 .translate-options-menu {
     position: absolute;
     top: calc(100% + 8px);
@@ -399,7 +399,7 @@ body {
     transform: scale(1.05);
 }
 
-/* Ocultar iconos según el tema */
+/* Ocultar iconos seg�n el tema */
 .sun-icon {
     display: none;
 }
@@ -860,7 +860,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     margin-top: 2px;
 }
 
-/* Colores específicos de tarjetas */
+/* Colores espec�ficos de tarjetas */
 .card-income .card-icon { background-color: var(--income-bg); color: var(--income-color); }
 .card-expense .card-icon { background-color: var(--expense-bg); color: var(--expense-color); }
 .card-balance .card-icon { background-color: var(--balance-bg); color: var(--balance-color); }
@@ -929,7 +929,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     font-weight: 600;
 }
 
-/* Botones de acción de tabla */
+/* Botones de acci�n de tabla */
 .btn-edit,
 .btn-delete {
     background: none;
@@ -1103,7 +1103,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     gap: 12px;
 }
 
-/* Detalles de eliminación */
+/* Detalles de eliminaci�n */
 .transaction-detail-box {
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
@@ -1188,7 +1188,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     display: none;
 }
 
-/* --- ESTILOS DE IMPRESIÓN --- */
+/* --- ESTILOS DE IMPRESI�N --- */
 @media print {
     html, body {
         background-color: #ffffff !important;
@@ -1342,7 +1342,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     }
 }
 
-/* --- ESTILOS DEL MENÚ PRINCIPAL --- */
+/* --- ESTILOS DEL MEN� PRINCIPAL --- */
 .menu-section {
     display: flex;
     flex-direction: column;
@@ -1500,7 +1500,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     }
 }
 
-/* --- ESTILOS BOTÓN VOLVER EN HEADER --- */
+/* --- ESTILOS BOT�N VOLVER EN HEADER --- */
 .btn-back-to-menu {
     display: flex;
     align-items: center;
@@ -1524,7 +1524,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     color: var(--primary-color);
 }
 
-/* --- ESTILOS MÓDULO FINANZAS PERSONALES --- */
+/* --- ESTILOS M�DULO FINANZAS PERSONALES --- */
 .personal-finances-container {
     animation: fadeIn 0.4s ease-out;
     width: 100%;
@@ -1771,7 +1771,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     }
 }
 
-/* --- PANEL DE CATEGORÍAS PERSONALIZABLES --- */
+/* --- PANEL DE CATEGOR�AS PERSONALIZABLES --- */
 .color-circle {
     width: 28px;
     height: 28px;
@@ -1858,7 +1858,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     font-family: var(--font-family);
 }
 
-/* Botón flotante */
+/* Bot�n flotante */
 .btn-pf-copilot-toggle {
     width: 60px;
     height: 60px;
@@ -2001,7 +2001,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     transform: scale(1.05);
 }
 
-/* Panel de Configuración de API Key */
+/* Panel de Configuraci�n de API Key */
 .copilot-settings-panel {
     background-color: var(--input-bg);
     border-bottom: 1px solid var(--border-color);
@@ -2204,7 +2204,7 @@ html.dark .copilot-messages-container {
     opacity: 0.6;
 }
 
-/* Ajustes responsivos para móviles */
+/* Ajustes responsivos para m�viles */
 @media (max-width: 480px) {
     .pf-copilot-chat-window {
         position: fixed;
@@ -2251,7 +2251,7 @@ html.dark .module-indicator {
     border-color: rgba(129, 140, 248, 0.25);
 }
 
-/* --- BOTÓN DE SUBIR AL INICIO --- */
+/* --- BOT�N DE SUBIR AL INICIO --- */
 .btn-scroll-top {
     position: fixed;
     bottom: 30px;
@@ -2289,12 +2289,12 @@ html.dark .module-indicator {
     transform: translateY(0);
 }
 
-/* Ajuste del botón cuando el copilot está visible en la página */
+/* Ajuste del bot�n cuando el copilot est� visible en la p�gina */
 .has-copilot .btn-scroll-top {
     bottom: 105px;
 }
 
-/* Adaptación responsiva para móviles */
+/* Adaptaci�n responsiva para m�viles */
 @media (max-width: 768px) {
     .btn-scroll-top {
         bottom: 20px;

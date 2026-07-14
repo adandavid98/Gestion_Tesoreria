@@ -11,9 +11,9 @@ const db = getFirestore(app);
 // Habilitar persistencia offline en Firestore
 enableIndexedDbPersistence(db).catch((err) => {
     if (err.code == 'failed-precondition') {
-        console.warn('La persistencia offline de Firestore falló: Múltiples pestañas abiertas.');
+        console.warn('La persistencia offline de Firestore fall¿: M¿ltiples pesta¿as abiertas.');
     } else if (err.code == 'unimplemented') {
-        console.warn('Este navegador o entorno móvil no soporta persistencia offline de Firestore.');
+        console.warn('Este navegador o entorno mÓvil no soporta persistencia offline de Firestore.');
     }
 });
 
@@ -40,8 +40,8 @@ let editingPfExpenseId = null;
 const DEFAULT_TREASURY_CATEGORIES = [
     { name: "Ofrenda", color: "#10b981" },
     { name: "Diezmo", color: "#059669" },
-    { name: "Donación", color: "#0d9488" },
-    { name: "Construcción", color: "#d97706" },
+    { name: "DonaciÓn", color: "#0d9488" },
+    { name: "ConstrucciÓn", color: "#d97706" },
     { name: "Sonido / Multimedia", color: "#4f46e5" },
     { name: "Evangelismo", color: "#7c3aed" },
     { name: "Servicios (Agua/Luz)", color: "#dc2626" },
@@ -68,24 +68,24 @@ let tDonutChartInstance = null;
 let tBarChartInstance = null;
 
 const DEFAULT_CONCEPT_CATEGORIES = [
-    { concepto: "Ofrenda de jóvenes", categoria: "Ofrenda" },
+    { concepto: "Ofrenda de j¿venes", categoria: "Ofrenda" },
     { concepto: "Ofrenda dominical", categoria: "Ofrenda" },
     { concepto: "Ofrenda especial", categoria: "Ofrenda" },
-    { concepto: "Donación", categoria: "Donaciones" },
+    { concepto: "DonaciÓn", categoria: "Donaciones" },
     { concepto: "Diezmo", categoria: "Diezmos" },
-    { concepto: "Compra de micrófonos", categoria: "Equipo de sonido" },
+    { concepto: "Compra de micrÓfonos", categoria: "Equipo de sonido" },
     { concepto: "Compra de cables", categoria: "Equipo de sonido" },
     { concepto: "Alquiler de local", categoria: "Alquiler" },
-    { concepto: "Refrigerio para reunión", categoria: "Refrigerios" },
-    { concepto: "Pizza reunión", categoria: "Refrigerios" },
+    { concepto: "Refrigerio para reuniÓn", categoria: "Refrigerios" },
+    { concepto: "Pizza reuniÓn", categoria: "Refrigerios" },
     { concepto: "Refrescos y vasos", categoria: "Refrigerios" },
-    { concepto: "Impresión de folletos", categoria: "Papelería" },
-    { concepto: "Fotocopias e impresiones", categoria: "Papelería" },
+    { concepto: "Impresi¿n de folletos", categoria: "Papeler¿a" },
+    { concepto: "Fotocopias e impresiones", categoria: "Papeler¿a" },
     { concepto: "Gasolina transporte", categoria: "Transporte" },
-    { concepto: "Alquiler de autobús", categoria: "Transporte" },
-    { concepto: "Inscripción campamento", categoria: "Campamento" },
+    { concepto: "Alquiler de autobÚs", categoria: "Transporte" },
+    { concepto: "Inscripci¿n campamento", categoria: "Campamento" },
     { concepto: "Materiales de escuela dominical", categoria: "Escuela dominical" },
-    { concepto: "Artículos de limpieza", categoria: "Mantenimiento" }
+    { concepto: "Art¿culos de limpieza", categoria: "Mantenimiento" }
 ];
 
 const KEYWORD_CATEGORY_RULES = [
@@ -93,10 +93,10 @@ const KEYWORD_CATEGORY_RULES = [
     { keywords: ["microfono", "cable", "sonido", "audio", "bocina", "consola", "parlante", "audifono", "parlantes"], categoria: "Equipo de sonido" },
     { keywords: ["alquiler", "renta", "local", "salon", "sillas", "mesa", "mesas"], categoria: "Alquiler" },
     { keywords: ["refrigerio", "pizza", "refresco", "comida", "vasos", "platos", "cena", "almuerzo", "pan", "pastel", "gaseosa"], categoria: "Refrigerios" },
-    { keywords: ["impresion", "fotocopia", "folleto", "papel", "cuaderno", "lapicero", "tinta", "lapiz", "hoja", "hojas"], categoria: "Papelería" },
+    { keywords: ["impresion", "fotocopia", "folleto", "papel", "cuaderno", "lapicero", "tinta", "lapiz", "hoja", "hojas"], categoria: "Papeler¿a" },
     { keywords: ["gasolina", "transporte", "autobus", "pasaje", "viaje", "taxi", "combustible", "flete", "peaje"], categoria: "Transporte" },
     { keywords: ["campamento", "retiro", "inscripcion", "evento", "conferencia"], categoria: "Campamento" },
-    { keywords: ["niños", "escuela dominical", "didactico", "juguetes", "clase", "materiales"], categoria: "Escuela dominical" },
+    { keywords: ["niÑos", "escuela dominical", "didactico", "juguetes", "clase", "materiales"], categoria: "Escuela dominical" },
     { keywords: ["limpieza", "mantenimiento", "escoba", "jabon", "reparacion", "pintura", "desinfectante", "cloro"], categoria: "Mantenimiento" }
 ];
 
@@ -108,16 +108,16 @@ const DEFAULT_PF_CONCEPT_CATEGORIES = [
     { concepto: "Factura de Agua", categoria: "Electricidad / Agua" },
     { concepto: "Factura de Basura", categoria: "Electricidad / Agua" },
     { concepto: "Compra de Gasolina", categoria: "Gasolina / Transporte" },
-    { concepto: "Pasaje de Autobús / Metro", categoria: "Gasolina / Transporte" },
+    { concepto: "Pasaje de Autob¿s / Metro", categoria: "Gasolina / Transporte" },
     { concepto: "Pago de Uber / Taxi", categoria: "Gasolina / Transporte" },
     { concepto: "Compra en Supermercado", categoria: "Supermercado / Comida" },
     { concepto: "Cena Familiar / Salida a Comer", categoria: "Supermercado / Comida" },
     { concepto: "Almuerzo Diario", categoria: "Supermercado / Comida" },
     { concepto: "Salida al Cine", categoria: "Salidas / Entretenimiento" },
     { concepto: "Salida con amigos", categoria: "Salidas / Entretenimiento" },
-    { concepto: "Suscripción de Netflix", categoria: "Suscripciones" },
-    { concepto: "Suscripción de Spotify", categoria: "Suscripciones" },
-    { concepto: "Suscripción de Youtube Premium", categoria: "Suscripciones" },
+    { concepto: "Suscripci¿n de Netflix", categoria: "Suscripciones" },
+    { concepto: "Suscripci¿n de Spotify", categoria: "Suscripciones" },
+    { concepto: "Suscripci¿n de Youtube Premium", categoria: "Suscripciones" },
     { concepto: "Consulta Médica", categoria: "Salud / Medicinas" },
     { concepto: "Compra de Medicinas en Farmacia", categoria: "Salud / Medicinas" }
 ];
@@ -173,7 +173,7 @@ const pfFilterYear = document.getElementById('pf-filter-year');
 const pfCategory = document.getElementById('pf-category');
 const pfAutocompleteList = document.getElementById('pf-autocomplete-list');
 
-// Elementos de Configuración de Categorías
+// Elementos de Configuraci¿n de Categorías
 const btnTManageCategories = document.getElementById('btn-t-manage-categories');
 const btnPfManageCategories = document.getElementById('btn-pf-manage-categories');
 const modalManageCategories = document.getElementById('modal-manage-categories');
@@ -248,7 +248,7 @@ const modalPfClear = document.getElementById('modal-pf-clear');
 const btnPfClearCancel = document.getElementById('btn-pf-clear-cancel');
 const btnPfClearConfirm = document.getElementById('btn-pf-clear-confirm');
 
-// --- INICIALIZACIÓN ---
+// --- INICIALIZACI¿N ---
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Configurar selector de fecha (valor por defecto: hoy, max: hoy)
     const todayStr = getTodayString();
@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCopilot();
 });
 
-// --- ESCUCHAR ESTADO DE AUTENTICACIÓN ---
+// --- ESCUCHAR ESTADO DE AUTENTICACI¿N ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
@@ -295,7 +295,7 @@ onAuthStateChanged(auth, async (user) => {
         // Configurar filtros basándose en las transacciones cargadas
         initFilters();
         
-        // Mostrar módulo activo (por defecto: 'menu')
+        // Mostrar mÓdulo activo (por defecto: 'menu')
         showModule(currentModule);
         
         // Renderizar interfaz
@@ -336,10 +336,91 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
+function cleanTextEncoding(str) {
+    if (!str || typeof str !== 'string') return str;
+    return str.replace(/\u00C3\u00B3/g, 'ó')
+              .replace(/\u00C3\u00AD/g, 'í')
+              .replace(/\u00C3\u00BA/g, 'ú')
+              .replace(/\u00C3\u00A1/g, 'á')
+              .replace(/\u00C3\u00A9/g, 'é')
+              .replace(/\u00C3\u00B1/g, 'ñ')
+              .replace(/\u00C3\u0091/g, 'Ñ')
+              .replace(/\u00C3\u009A/g, 'Ú')
+              .replace(/\u00C3\u0093/g, 'Ó')
+              .replace(/\u00C2\u00BF/g, '¿')
+              .replace(/\u00C2\u00A1/g, '¡');
+}
+
+async function migrateDataEncoding() {
+    let modified = false;
+
+    // 1. Limpiar categorías personales
+    if (personalCategories && Array.isArray(personalCategories)) {
+        personalCategories = personalCategories.map(cat => {
+            const cleanName = cleanTextEncoding(cat.name);
+            if (cleanName !== cat.name) {
+                cat.name = cleanName;
+                modified = true;
+            }
+            return cat;
+        });
+    }
+
+    // 2. Limpiar categorías de tesorería
+    if (treasuryCategories && Array.isArray(treasuryCategories)) {
+        treasuryCategories = treasuryCategories.map(cat => {
+            const cleanName = cleanTextEncoding(cat.name);
+            if (cleanName !== cat.name) {
+                cat.name = cleanName;
+                modified = true;
+            }
+            return cat;
+        });
+    }
+
+    // 3. Limpiar transacciones de tesorería
+    if (transactions && Array.isArray(transactions)) {
+        transactions = transactions.map(t => {
+            const cleanCat = cleanTextEncoding(t.categoria);
+            const cleanCon = cleanTextEncoding(t.concepto);
+            if (cleanCat !== t.categoria || cleanCon !== t.concepto) {
+                t.categoria = cleanCat;
+                t.concepto = cleanCon;
+                modified = true;
+            }
+            return t;
+        });
+    }
+
+    // 4. Limpiar gastos personales
+    if (personalExpenses && Array.isArray(personalExpenses)) {
+        personalExpenses = personalExpenses.map(pe => {
+            const cleanCat = cleanTextEncoding(pe.categoria);
+            const cleanCon = cleanTextEncoding(pe.concepto);
+            if (cleanCat !== pe.categoria || cleanCon !== pe.concepto) {
+                pe.categoria = cleanCat;
+                pe.concepto = cleanCon;
+                modified = true;
+            }
+            return pe;
+        });
+    }
+
+    if (modified) {
+        console.warn("Se detectó y reparó codificación de texto dañada en los datos almacenados.");
+        try {
+            await saveTransactions();
+            await savePersonalFinances();
+        } catch (err) {
+            console.error("Error al guardar migración de codificación: ", err);
+        }
+    }
+}
+
 // --- FUNCIONES DE PERSISTENCIA Y CARGA ---
 
 async function loadTransactions() {
-    // 1. Intentar cargar localmente primero para visualización rápida
+    // 1. Intentar cargar localmente primero para visualizaciÓn r¿pida
     try {
         const stored = localStorage.getItem('transacciones');
         if (stored) {
@@ -360,7 +441,7 @@ async function loadTransactions() {
         treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
     }
     
-    // 2. Si hay sesión iniciada en la nube, sincronizar con Firestore
+    // 2. Si hay sesiÓn iniciada en la nube, sincronizar con Firestore
     if (currentUser && db) {
         try {
             const userDocRef = doc(db, 'users', currentUser.uid);
@@ -377,11 +458,11 @@ async function loadTransactions() {
                     treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
                 }
                 
-                // Actualizar caché local
+                // Actualizar cach¿ local
                 localStorage.setItem('transacciones', JSON.stringify(transactions));
                 localStorage.setItem('treasury_categories', JSON.stringify(treasuryCategories));
             } else {
-                // Si no hay datos en la nube pero sí locales, subirlos (migración automática)
+                // Si no hay datos en la nube pero s¿ locales, subirlos (migraciÓn automática)
                 if (transactions.length > 0 || treasuryCategories.length > 0) {
                     showToast('Sincronizando tus datos locales con la nube...', 'info');
                     await saveTransactions();
@@ -392,6 +473,7 @@ async function loadTransactions() {
             showToast('Error al cargar datos en la nube. Usando copia local.', 'warning');
         }
     }
+    await migrateDataEncoding();
     
     // Renderizar datalists de categorías
     renderCategoryDatalists();
@@ -431,12 +513,12 @@ function initFilters() {
     
     filterMonth.value = currentMonth;
     
-    // Rellenar años disponibles dinámicamente
+    // Rellenar aÑos disponibles dinámicamente
     populateYearFilter(currentYear);
 }
 
 function populateYearFilter(defaultYear) {
-    // Obtenemos todos los años de las transacciones guardadas
+    // Obtenemos todos los aÑos de las transacciones guardadas
     const years = new Set();
     years.add(defaultYear);
     years.add(defaultYear - 1);
@@ -449,7 +531,7 @@ function populateYearFilter(defaultYear) {
         }
     });
     
-    // Ordenar años
+    // Ordenar aÑos
     const sortedYears = Array.from(years).sort((a, b) => b - a);
     
     filterYear.innerHTML = '';
@@ -464,7 +546,7 @@ function populateYearFilter(defaultYear) {
     });
 }
 
-// --- FUNCIONES MÓDULO FINANZAS PERSONALES ---
+// --- FUNCIONES M¿DULO FINANZAS PERSONALES ---
 
 async function loadPersonalFinances() {
     // 1. Intentar cargar localmente primero
@@ -544,6 +626,7 @@ async function loadPersonalFinances() {
             console.error('Error sincronizando finanzas personales con la nube', e);
         }
     }
+    await migrateDataEncoding();
     
     // Renderizar datalists de categorías
     renderCategoryDatalists();
@@ -582,7 +665,7 @@ function populatePfYearFilter(defaultYear) {
     
     const sortedYears = Array.from(years).sort((a, b) => b - a);
     
-    // Guardar selección actual si existe
+    // Guardar selecci¿n actual si existe
     const currentSel = pfFilterYear.value;
     
     pfFilterYear.innerHTML = '';
@@ -622,7 +705,7 @@ async function savePersonalFinances() {
             }, { merge: true });
         } catch (e) {
             console.error('Error guardando finanzas personales en Firestore', e);
-            showToast('Error de sincronización con la nube.', 'error');
+            showToast('Error de sincronizaciÓn con la nube.', 'error');
         }
     }
 }
@@ -635,7 +718,7 @@ function showModule(moduleName) {
     dashboardContainer.classList.add('hidden-element');
     personalFinancesContainer.classList.add('hidden-element');
     
-    // Actualizar indicador del módulo activo en la cabecera
+    // Actualizar indicador del mÓdulo activo en la cabecera
     const moduleIndicator = document.getElementById('module-indicator');
     if (moduleIndicator) {
         if (moduleName === 'tesoreria') {
@@ -667,7 +750,7 @@ function showModule(moduleName) {
 async function checkAndClonePfExpenses(selYear, selMonth) {
     if (personalExpenses.length === 0) return false;
     
-    // 1. Filtrar los gastos que pertenecen al mes/año seleccionado
+    // 1. Filtrar los gastos que pertenecen al mes/aÑo seleccionado
     const currentMonthExpenses = personalExpenses.filter(e => {
         if (!e.fecha) return false;
         const [y, m] = e.fecha.split('-').map(Number);
@@ -697,10 +780,10 @@ async function checkAndClonePfExpenses(selYear, selMonth) {
         }
     });
     
-    // Si no se encontró ningún período anterior con datos, salir
+    // Si no se encontr¿ ningÚn períododo anterior con datos, salir
     if (maxTimeVal === -1) return false;
     
-    // 3. Obtener los gastos del período origen
+    // 3. Obtener los gastos del períododo origen
     const sourceExpenses = personalExpenses.filter(e => {
         if (!e.fecha) return false;
         const [y, m] = e.fecha.split('-').map(Number);
@@ -709,12 +792,12 @@ async function checkAndClonePfExpenses(selYear, selMonth) {
     
     if (sourceExpenses.length === 0) return false;
     
-    // 4. Clonar gastos al nuevo período
+    // 4. Clonar gastos al nuevo períododo
     const clonedExpenses = [];
     const targetMonthStr = String(selMonth + 1).padStart(2, '0');
     const targetPeriodKey = `${selYear}-${targetMonthStr}`;
     
-    // Obtener último día del mes destino
+    // Obtener ¿ltimo día del mes destino
     const lastDayOfTargetMonth = new Date(selYear, selMonth + 1, 0).getDate();
     
     sourceExpenses.forEach(e => {
@@ -738,7 +821,7 @@ async function checkAndClonePfExpenses(selYear, selMonth) {
         });
     });
     
-    // Copiar también el presupuesto si no está configurado en el mes destino
+    // Copiar tambi¿n el presupuesto si no está configurado en el mes destino
     if (!personalIncomes[targetPeriodKey]) {
         const sourcePeriodKey = `${bestPastYear}-${String(bestPastMonth + 1).padStart(2, '0')}`;
         const sourceIncome = personalIncomes[sourcePeriodKey];
@@ -752,14 +835,14 @@ async function checkAndClonePfExpenses(selYear, selMonth) {
     
     // Guardar en Firestore/localStorage
     await savePersonalFinances();
-    showToast(`Se precargaron los gastos y presupuesto desde el período anterior.`, 'info');
+    showToast(`Se precargaron los gastos y presupuesto desde el períododo anterior.`, 'info');
     return true;
 }
 
 function renderPersonalFinances() {
     if (!personalFinancesContainer || personalFinancesContainer.classList.contains('hidden-element')) return;
     
-    // Filtrar fijos y variables por período seleccionado
+    // Filtrar fijos y variables por períododo seleccionado
     const isAllMonths = pfFilterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(pfFilterMonth.value);
     const selYear = parseInt(pfFilterYear.value);
@@ -786,7 +869,7 @@ function renderPersonalFinances() {
     if (pfFixedCount) pfFixedCount.textContent = `${fixedExpenses.length} ${fixedExpenses.length === 1 ? 'item' : 'items'}`;
     if (pfVariableCount) pfVariableCount.textContent = `${variableExpenses.length} ${variableExpenses.length === 1 ? 'item' : 'items'}`;
     
-    // Calcular resúmenes
+    // Calcular resÚmenes
     let totalPaid = 0;
     let totalPending = 0;
     
@@ -799,7 +882,7 @@ function renderPersonalFinances() {
         }
     });
     
-    // Obtener presupuesto/ingreso según el filtro
+    // Obtener presupuesto/ingreso segÚn el filtro
     let currentIncome = 0;
     if (isAllMonths) {
         let annualSum = 0;
@@ -833,7 +916,7 @@ function renderPersonalFinances() {
     
     const balance = currentIncome - totalPaid;
     
-    // Renderizar resúmenes en las tarjetas
+    // Renderizar resÚmenes en las tarjetas
     if (pfTotalPaid) pfTotalPaid.textContent = formatCurrency(totalPaid).replace('RD$', 'RD$ ');
     if (pfTotalPending) pfTotalPending.textContent = formatCurrency(totalPending).replace('RD$', 'RD$ ');
     if (pfTotalBalance) {
@@ -854,7 +937,7 @@ function renderPersonalFinances() {
         spentPct = (totalSpent / currentIncome) * 100;
     }
     
-    // Determinar color dinámico de la barra
+    // Determinar color din¿mico de la barra
     let barColor = 'var(--income-color)'; // Verde < 70%
     if (spentPct >= 70 && spentPct <= 90) {
         barColor = '#f59e0b'; // Amarillo 70% - 90%
@@ -938,7 +1021,7 @@ function renderPersonalFinances() {
             `;
         }).join('');
         
-        // Agregar manejadores de eventos dinámicos
+        // Agregar manejadores de eventos din¿micos
         listEl.querySelectorAll('.btn-payment-state').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
@@ -992,7 +1075,7 @@ async function handlePfExpenseSubmit(e) {
     }
     
     if (editingPfExpenseId) {
-        // Modo Edición
+        // Modo Edici¿n
         const idx = personalExpenses.findIndex(item => item.id === editingPfExpenseId);
         if (idx !== -1) {
             personalExpenses[idx].fecha = dateVal;
@@ -1005,7 +1088,7 @@ async function handlePfExpenseSubmit(e) {
             await savePersonalFinances();
             showToast('Gasto personal actualizado con éxito.', 'success');
             
-            // Restablecer el botón de envío y limpiar estado de edición
+            // Restablecer el bot¿n de env¿o y limpiar estado de edici¿n
             cancelEditPersonalExpense();
         }
     } else {
@@ -1034,7 +1117,7 @@ async function handlePfExpenseSubmit(e) {
         userEditedPfCategory = false;
     }
     
-    // Recargar filtros en base a los nuevos años registrados si aplica
+    // Recargar filtros en base a los nuevos aÑos registrados si aplica
     const now = new Date();
     populatePfYearFilter(now.getFullYear());
     
@@ -1056,7 +1139,7 @@ function startEditPersonalExpense(id) {
     pfStatus.value = item.estado;
     if (pfCategory) pfCategory.value = item.categoria || '';
     
-    // Cambiar texto de botón submit
+    // Cambiar texto de bot¿n submit
     if (pfSubmitText) pfSubmitText.textContent = 'Guardar';
     if (btnPfCancelEdit) btnPfCancelEdit.classList.remove('hidden-btn');
     
@@ -1092,7 +1175,7 @@ function cancelEditPersonalExpense() {
     if (pfCategory) pfCategory.value = '';
     if (pfDate) pfDate.value = getTodayString();
     
-    // Restablecer botón submit
+    // Restablecer bot¿n submit
     if (pfSubmitText) pfSubmitText.textContent = 'Agregar';
     if (btnPfCancelEdit) btnPfCancelEdit.classList.add('hidden-btn');
     
@@ -1155,10 +1238,10 @@ function downloadPfReport() {
     const translations = {
         es: {
             noExpensesRegistered: 'No hay gastos personales registrados para generar el reporte.',
-            noExpensesPeriod: 'No hay gastos registrados en el período seleccionado.',
+            noExpensesPeriod: 'No hay gastos registrados en el períododo seleccionado.',
             reportTitle: 'Reporte de Finanzas Personales',
             subtitle: 'Control de gastos y presupuesto personal',
-            period: 'Período',
+            period: 'Períododo',
             generated: 'Generado',
             budget: 'Ingreso / Presupuesto',
             totalPaid: 'Total Pagado',
@@ -1172,7 +1255,7 @@ function downloadPfReport() {
             amount: 'Monto',
             paid: 'PAGADO',
             pending: 'PENDIENTE',
-            noRecords: 'No hay registros en esta sección',
+            noRecords: 'No hay registros en esta secci¿n',
             footer: 'Reporte de Finanzas Personales - Generado localmente y de forma privada por Income Manage.',
             months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
         },
@@ -1200,50 +1283,50 @@ function downloadPfReport() {
             months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
         },
         fr: {
-            noExpensesRegistered: 'Aucune dépense personnelle enregistrée pour générer le rapport.',
-            noExpensesPeriod: 'Aucune dépense enregistrée sur la période sélectionnée.',
+            noExpensesRegistered: 'Aucune d¿pense personnelle enregistr¿e pour g¿n¿rer le rapport.',
+            noExpensesPeriod: 'Aucune d¿pense enregistr¿e sur la p¿riode s¿lectionn¿e.',
             reportTitle: 'Rapport de Finances Personnelles',
-            subtitle: 'Contrôle des dépenses et budget personnel',
-            period: 'Période',
-            generated: 'Généré le',
+            subtitle: 'Contr¿le des d¿penses et budget personnel',
+            period: 'P¿riode',
+            generated: 'G¿n¿r¿ le',
             budget: 'Revenu / Budget',
-            totalPaid: 'Total Payé',
+            totalPaid: 'Total Pay¿',
             totalPending: 'Total En Attente',
             availableBalance: 'Solde Disponible',
-            fixedExpenses: 'Dépenses Fixes',
-            variableExpenses: 'Dépenses Variables / Imprévues',
+            fixedExpenses: 'D¿penses Fixes',
+            variableExpenses: 'D¿penses Variables / Impr¿vues',
             date: 'Date',
             concept: 'Concept',
             status: 'Statut',
             amount: 'Montant',
-            paid: 'PAYÉ',
+            paid: 'PAY¿',
             pending: 'EN ATTENTE',
             noRecords: 'Aucun enregistrement dans cette section',
-            footer: 'Rapport de Finances Personnelles - Généré localement et en toute confidentialité par Income Manage.',
-            months: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+            footer: 'Rapport de Finances Personnelles - G¿n¿r¿ localement et en toute confidentialit¿ par Income Manage.',
+            months: ['Janvier', 'F¿vrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Ao¿t', 'Septembre', 'Octobre', 'Novembre', 'D¿cembre']
         },
         pt: {
-            noExpensesRegistered: 'Nenhuma despesa pessoal registrada para gerar o relatório.',
-            noExpensesPeriod: 'Nenhuma despesa registrada no período selecionado.',
-            reportTitle: 'Relatório de Finanças Pessoais',
-            subtitle: 'Controle de despesas e orçamento pessoal',
-            period: 'Período',
+            noExpensesRegistered: 'Nenhuma despesa pessoal registrada para gerar o relat¿rio.',
+            noExpensesPeriod: 'Nenhuma despesa registrada no períododo selecionado.',
+            reportTitle: 'Relat¿rio de Finan¿as Pessoais',
+            subtitle: 'Controle de despesas e or¿amento pessoal',
+            period: 'Períododo',
             generated: 'Gerado em',
-            budget: 'Renda / Orçamento',
+            budget: 'Renda / Or¿amento',
             totalPaid: 'Total Pago',
             totalPending: 'Total Pendente',
-            availableBalance: 'Saldo Disponível',
+            availableBalance: 'Saldo Dispon¿vel',
             fixedExpenses: 'Despesas Fixas',
-            variableExpenses: 'Despesas Variáveis / Imprevistas',
+            variableExpenses: 'Despesas Vari¿veis / Imprevistas',
             date: 'Data',
             concept: 'Conceito',
             status: 'Status',
             amount: 'Valor',
             paid: 'PAGO',
             pending: 'PENDENTE',
-            noRecords: 'Nenhum registro nesta seção',
-            footer: 'Relatório de Finanças Pessoais - Gerado localmente e de forma privada por Income Manage.',
-            months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+            noRecords: 'Nenhum registro nesta se¿¿o',
+            footer: 'Relat¿rio de Finan¿as Pessoais - Gerado localmente e de forma privada por Income Manage.',
+            months: ['Janeiro', 'Fevereiro', 'Mar¿o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         },
         it: {
             noExpensesRegistered: 'Nessuna spesa personale registrata per generare il report.',
@@ -1269,16 +1352,16 @@ function downloadPfReport() {
             months: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
         },
         de: {
-            noExpensesRegistered: 'Keine persönlichen Ausgaben registriert, um den Bericht zu erstellen.',
-            noExpensesPeriod: 'Keine Ausgaben im ausgewählten Zeitraum registriert.',
-            reportTitle: 'Persönlicher Finanzbericht',
-            subtitle: 'Ausgabenkontrolle und persönliches Budget',
+            noExpensesRegistered: 'Keine pers¿nlichen Ausgaben registriert, um den Bericht zu erstellen.',
+            noExpensesPeriod: 'Keine Ausgaben im ausgew¿hlten Zeitraum registriert.',
+            reportTitle: 'Pers¿nlicher Finanzbericht',
+            subtitle: 'Ausgabenkontrolle und pers¿nliches Budget',
             period: 'Zeitraum',
             generated: 'Erstellt am',
             budget: 'Einnahmen / Budget',
             totalPaid: 'Gesamt Bezahlt',
             totalPending: 'Gesamt Ausstehend',
-            availableBalance: 'Verfügbares Guthaben',
+            availableBalance: 'Verf¿gbares Guthaben',
             fixedExpenses: 'Fixkosten',
             variableExpenses: 'Variable / Unerwartete Ausgaben',
             date: 'Datum',
@@ -1287,9 +1370,9 @@ function downloadPfReport() {
             amount: 'Betrag',
             paid: 'BEZAHLT',
             pending: 'AUSSTEHEND',
-            noRecords: 'Keine Einträge in diesem Bereich',
-            footer: 'Persönlicher Finanzbericht - Lokal und privat von Income Manage generiert.',
-            months: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+            noRecords: 'Keine Eintr¿ge in diesem Bereich',
+            footer: 'Pers¿nlicher Finanzbericht - Lokal und privat von Income Manage generiert.',
+            months: ['Januar', 'Februar', 'M¿rz', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
         }
     };
     
@@ -1300,7 +1383,7 @@ function downloadPfReport() {
         return;
     }
     
-    // Filtrar fijos y variables por período seleccionado
+    // Filtrar fijos y variables por períododo seleccionado
     const isAllMonths = pfFilterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(pfFilterMonth.value);
     const selYear = parseInt(pfFilterYear.value);
@@ -1327,7 +1410,7 @@ function downloadPfReport() {
         else totalPending += amt;
     });
     
-    // Obtener presupuesto/ingreso según el filtro
+    // Obtener presupuesto/ingreso segÚn el filtro
     let currentIncome = 0;
     if (isAllMonths) {
         let annualSum = 0;
@@ -1464,7 +1547,7 @@ function downloadPfReport() {
         `;
     }
     
-    // Detectar si es dispositivo móvil
+    // Detectar si es dispositivo mÓvil
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
                      || (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
                      
@@ -1638,7 +1721,7 @@ function downloadPfReport() {
             printWindow.document.write(reportHTML);
             printWindow.document.close();
         } else {
-            showToast('El navegador bloqueó la ventana emergente de impresión.', 'error');
+            showToast('El navegador bloque¿ la ventana emergente de impresiÓn.', 'error');
         }
     } else {
         const printReportContainer = document.getElementById('print-report-container');
@@ -1700,7 +1783,7 @@ function exportPfBackup() {
         csvContent += `METADATA_PRESUPUESTO_MENSUAL,${key},${personalIncomes[key]}\r\n`;
     });
     
-    csvContent += 'id,fecha,concepto,monto,tipo,estado\r\n';
+    csvContent += 'id,fecha,concepto,monto,tipo,estado,categoria\r\n';
     
     // De más antiguo a más reciente
     const sorted = [...personalExpenses].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
@@ -1712,7 +1795,8 @@ function exportPfBackup() {
             escapeCSVField(e.concepto),
             e.monto,
             e.tipo,
-            e.estado
+            e.estado,
+            escapeCSVField(e.categoria || '')
         ];
         csvContent += row.join(',') + '\r\n';
     });
@@ -1766,7 +1850,7 @@ function parseAndValidatePfCsv(content) {
     let validCount = 0;
     let startIdx = 0;
     
-    // Analizar metadata del presupuesto (pueden ser múltiples líneas de presupuesto mensual)
+    // Analizar metadata del presupuesto (pueden ser m¿ltiples l¿neas de presupuesto mensual)
     while (startIdx < lines.length) {
         const lineClean = lines[startIdx].replace(/^\uFEFF/, '').trim();
         if (lineClean.startsWith('METADATA_PRESUPUESTO_MENSUAL,')) {
@@ -1776,7 +1860,7 @@ function parseAndValidatePfCsv(content) {
             parsedPfIncomesToImport[mKey] = mVal;
             startIdx++;
         } else if (lineClean.startsWith('METADATA_PRESUPUESTO,')) {
-            // Compatibilidad legacy: asignar presupuesto único al mes actual
+            // Compatibilidad legacy: asignar presupuesto ¿nico al mes actual
             const parts = lineClean.split(',');
             const mVal = parseFloat(parts[1]) || 0.00;
             const now = new Date();
@@ -1797,22 +1881,29 @@ function parseAndValidatePfCsv(content) {
     const headerLine = lines[startIdx].trim().toLowerCase();
     const headers = headerLine.split(',');
     
-    if (headers.length !== 6 || headers[0] !== 'id' || headers[1] !== 'fecha' || headers[2] !== 'concepto' || headers[3] !== 'monto' || headers[4] !== 'tipo' || headers[5] !== 'estado') {
+    // Aceptar CSV con 6 columnas (legacy sin categoria) o 7 columnas (con categoria)
+    const isLegacy6Col = headers.length === 6 && headers[0] === 'id' && headers[1] === 'fecha' && headers[2] === 'concepto' && headers[3] === 'monto' && headers[4] === 'tipo' && headers[5] === 'estado';
+    const isNew7Col = headers.length === 7 && headers[0] === 'id' && headers[1] === 'fecha' && headers[2] === 'concepto' && headers[3] === 'monto' && headers[4] === 'tipo' && headers[5] === 'estado' && headers[6] === 'categoria';
+    
+    if (!isLegacy6Col && !isNew7Col) {
         showToast('Formato de CSV de finanzas personales inválido.', 'error');
         return;
     }
+    
+    const expectedCols = isNew7Col ? 7 : 6;
     
     for (let i = startIdx + 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
         
         const row = splitCsvLine(line);
-        if (row.length !== 6) {
+        if (row.length < 6 || row.length > 7) {
             errorCount++;
             continue;
         }
         
         const [id, fecha, concepto, montoRaw, tipo, estado] = row.map(s => s.trim());
+        const categoria = row.length >= 7 ? row[6].trim() : '';
         const monto = parseFloat(montoRaw);
         const tipoNorm = tipo.toLowerCase();
         const estadoNorm = estado.toLowerCase();
@@ -1830,7 +1921,8 @@ function parseAndValidatePfCsv(content) {
                 concepto: concepto,
                 monto: monto,
                 tipo: tipoNorm,
-                estado: estadoNorm
+                estado: estadoNorm,
+                categoria: categoria
             });
             validCount++;
         } else {
@@ -1839,7 +1931,7 @@ function parseAndValidatePfCsv(content) {
     }
     
     if (validCount === 0 && Object.keys(parsedPfIncomesToImport).length === 0) {
-        showToast('No se encontraron registros de finanzas personales válidos.', 'error');
+        showToast('No se encontraron registros de finanzas personales v¿lidos.', 'error');
         return;
     }
     
@@ -1852,7 +1944,7 @@ function parseAndValidatePfCsv(content) {
     if (errorCount > 0) {
         statsMessage += `<br><span style="color: var(--expense-color);">Se omitieron <strong>${errorCount}</strong> filas debido a errores de formato.</span>`;
     }
-    statsMessage += `<br><br>¿Estás seguro de que deseas proceder? Los gastos actuales serán reemplazados por completo.`;
+    statsMessage += `<br><br>¿Est¿s seguro de que deseas proceder? Los gastos actuales ser¿n reemplazados por completo.`;
     
     if (pfImportStatsText) {
         pfImportStatsText.innerHTML = statsMessage;
@@ -1916,11 +2008,11 @@ function setupEventListeners() {
         }
     });
     
-    // Envío del formulario
+    // Env¿o del formulario
     transactionForm.addEventListener('submit', handleFormSubmit);
     btnCancelEdit.addEventListener('click', cancelEdit);
     
-    // Botón para simular clic en input file para importar CSV
+    // Bot¿n para simular clic en input file para importar CSV
     btnImportTrigger.addEventListener('click', () => {
         csvFileInput.value = ''; // Resetear
         csvFileInput.click();
@@ -1936,7 +2028,7 @@ function setupEventListeners() {
     btnDeleteCancel.addEventListener('click', () => closeModal(modalDelete));
     btnDeleteConfirm.addEventListener('click', confirmDeleteTransaction);
     
-    // Botones del modal de importación
+    // Botones del modal de importaci¿n
     btnImportCancel.addEventListener('click', () => {
         closeModal(modalImport);
         parsedCsvTransactionsToImport = [];
@@ -1955,32 +2047,32 @@ function setupEventListeners() {
         });
     });
     
-    // Autenticación con Google
+    // Autenticaci¿n con Google
     if (btnLoginGoogle) {
         btnLoginGoogle.addEventListener('click', async () => {
             try {
                 await signInWithPopup(auth, googleProvider);
             } catch (error) {
-                console.error("Error al iniciar sesión: ", error);
-                showToast('Error al iniciar sesión con Google.', 'error');
+                console.error("Error al iniciar sesiÓn: ", error);
+                showToast('Error al iniciar sesiÓn con Google.', 'error');
             }
         });
     }
     
-    // Cerrar sesión
+    // Cerrar sesiÓn
     if (btnLogout) {
         btnLogout.addEventListener('click', async () => {
             try {
                 await signOut(auth);
-                showToast('Sesión cerrada correctamente.', 'info');
+                showToast('Sesi¿n cerrada correctamente.', 'info');
             } catch (error) {
-                console.error("Error al cerrar sesión: ", error);
-                showToast('Error al cerrar sesión.', 'error');
+                console.error("Error al cerrar sesiÓn: ", error);
+                showToast('Error al cerrar sesiÓn.', 'error');
             }
         });
     }
     
-    // Navegación de módulos
+    // Navegaci¿n de mÓdulos
     if (btnGotoTesoreria) {
         btnGotoTesoreria.addEventListener('click', () => showModule('tesoreria'));
     }
@@ -2065,7 +2157,7 @@ function setupEventListeners() {
         btnPfClearConfirm.addEventListener('click', executePfClearData);
     }
     
-    // Panel de Configuración de Categorías
+    // Panel de Configuraci¿n de Categorías
     if (btnTManageCategories) {
         btnTManageCategories.addEventListener('click', () => {
             currentCategoryModule = 'tesoreria';
@@ -2093,7 +2185,7 @@ function setupEventListeners() {
         btnMcClose.addEventListener('click', () => closeModal(modalManageCategories));
     }
     
-    // Botón de subir al inicio (Scroll-to-top)
+    // Bot¿n de subir al inicio (Scroll-to-top)
     window.addEventListener('scroll', updateScrollTopButtonVisibility);
     const btnScrollTop = document.getElementById('btn-scroll-top');
     if (btnScrollTop) {
@@ -2113,7 +2205,7 @@ function toggleTheme() {
     localStorage.setItem('tema', isDark ? 'dark' : 'light');
     showToast(`Modo ${isDark ? 'oscuro' : 'claro'} activado`, 'info');
     
-    // Si estamos en algún módulo activo, refrescar para actualizar los colores de los textos de los gráficos
+    // Si estamos en alg¿n mÓdulo activo, refrescar para actualizar los colores de los textos de los gráficos
     if (currentModule === 'personales') {
         renderPersonalFinances();
     } else if (currentModule === 'tesoreria') {
@@ -2123,7 +2215,7 @@ function toggleTheme() {
 
 // --- LOGICA DE AUTOCOMPLETADO ---
 
-// Normaliza texto eliminando acentos/diacríticos y convirtiendo a minúsculas
+// Normaliza texto eliminando acentos/diacr¿ticos y convirtiendo a min¿sculas
 function normalizeText(str) {
     if (!str) return '';
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -2141,7 +2233,7 @@ function handleConceptInput() {
         return;
     }
     
-    // Obtener conceptos únicos de los valores por defecto
+    // Obtener conceptos ¿nicos de los valores por defecto
     const conceptMap = new Map();
     DEFAULT_CONCEPT_CATEGORIES.forEach(item => {
         conceptMap.set(normalizeText(item.concepto), {
@@ -2150,7 +2242,7 @@ function handleConceptInput() {
         });
     });
     
-    // Sobrescribir/añadir con el historial de transacciones reales (máxima prioridad)
+    // Sobrescribir/a¿adir con el historial de transacciones reales (m¿xima prioridad)
     transactions.forEach(t => {
         const conceptNorm = t.concepto.trim();
         if (conceptNorm) {
@@ -2166,7 +2258,7 @@ function handleConceptInput() {
     // Buscar coincidencias parciales con el texto normalizado
     const matches = uniqueConcepts.filter(item => 
         normalizeText(item.original).includes(valNorm)
-    ).slice(0, 5); // Máximo 5 sugerencias
+    ).slice(0, 5); // M¿ximo 5 sugerencias
     
     if (matches.length > 0) {
         matches.forEach(match => {
@@ -2239,28 +2331,28 @@ function closeAutocomplete() {
     autocompleteList.innerHTML = '';
 }
 
-// --- LOGICA DE RENDERIZACIÓN ---
+// --- LOGICA DE RENDERIZACI¿N ---
 
 function render() {
     const isAllMonths = filterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(filterMonth.value);
     const selYear = parseInt(filterYear.value);
     
-    // Filtrar transacciones del mes (o todos) y año seleccionados
+    // Filtrar transacciones del mes (o todos) y aÑo seleccionados
     const filtered = transactions.filter(t => {
         if (!t.fecha) return false;
         const [year, month] = t.fecha.split('-').map(Number);
         return year === selYear && (isAllMonths || (month - 1) === selMonth);
     });
     
-    // Ordenar por fecha descendente, y luego por fecha de creación descendente
+    // Ordenar por fecha descendente, y luego por fecha de creaci¿n descendente
     filtered.sort((a, b) => {
         const dateDiff = new Date(b.fecha) - new Date(a.fecha);
         if (dateDiff !== 0) return dateDiff;
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
     
-    // Calcular Resumen del período filtrado
+    // Calcular Resumen del períododo filtrado
     let totalIncome = 0;
     let totalExpense = 0;
     
@@ -2275,7 +2367,7 @@ function render() {
     
     const totalBalance = totalIncome - totalExpense;
     
-    // Calcular Saldo Histórico (toda la historia guardada)
+    // Calcular Saldo Hist¿rico (toda la historia guardada)
     let histIncome = 0;
     let histExpense = 0;
     transactions.forEach(t => {
@@ -2288,12 +2380,12 @@ function render() {
     });
     const historicalBalance = histIncome - histExpense;
     
-    // Mostrar totales del período
+    // Mostrar totales del períododo
     totalIncomeEl.textContent = formatCurrency(totalIncome);
     totalExpenseEl.textContent = formatCurrency(totalExpense);
     totalBalanceEl.textContent = formatCurrency(totalBalance);
     
-    // Mostrar Saldo Histórico
+    // Mostrar Saldo Hist¿rico
     const historicalBalanceEl = document.getElementById('historical-balance');
     if (historicalBalanceEl) {
         historicalBalanceEl.textContent = formatCurrency(historicalBalance);
@@ -2304,31 +2396,31 @@ function render() {
         }
     }
     
-    // Actualizar etiqueta del saldo del período
+    // Actualizar etiqueta del saldo del períododo
     const labelBalanceEl = document.getElementById('label-balance');
     if (labelBalanceEl) {
-        labelBalanceEl.textContent = isAllMonths ? 'Saldo del año' : 'Saldo del mes';
+        labelBalanceEl.textContent = isAllMonths ? 'Saldo del aÑo' : 'Saldo del mes';
     }
 
-    // Actualizar título de la sección de transacciones
+    // Actualizar t¿tulo de la secci¿n de transacciones
     const labelTransactionsTitleEl = document.getElementById('label-transactions-title');
     if (labelTransactionsTitleEl) {
-        labelTransactionsTitleEl.textContent = isAllMonths ? 'Transacciones del año' : 'Transacciones del mes';
+        labelTransactionsTitleEl.textContent = isAllMonths ? 'Transacciones del aÑo' : 'Transacciones del mes';
     }
     
-    // Actualizar párrafo de estado vacío
+    // Actualizar p¿rrafo de estado vacío
     const labelEmptyStateEl = document.getElementById('label-empty-state');
     if (labelEmptyStateEl) {
-        labelEmptyStateEl.textContent = isAllMonths ? 'No hay transacciones registradas para este año.' : 'No hay transacciones registradas para este mes.';
+        labelEmptyStateEl.textContent = isAllMonths ? 'No hay transacciones registradas para este aÑo.' : 'No hay transacciones registradas para este mes.';
     }
     
-    // Actualizar texto del botón de reporte
+    // Actualizar texto del bot¿n de reporte
     const labelReportBtnEl = document.getElementById('label-report-btn');
     if (labelReportBtnEl) {
         labelReportBtnEl.textContent = 'Generar reporte';
     }
     
-    // Modificar clases del saldo según su valor (opcional, siempre azul pero da feedback)
+    // Modificar clases del saldo segÚn su valor (opcional, siempre azul pero da feedback)
     if (totalBalance < 0) {
         totalBalanceEl.style.color = 'var(--expense-color)';
     } else {
@@ -2391,10 +2483,10 @@ function render() {
             const tdAcciones = document.createElement('td');
             tdAcciones.className = 'text-right';
             
-            // Botón Editar
+            // Bot¿n Editar
             const btnEdit = document.createElement('button');
             btnEdit.className = 'btn-edit';
-            btnEdit.setAttribute('aria-label', 'Editar transacción');
+            btnEdit.setAttribute('aria-label', 'Editar transacci¿n');
             btnEdit.innerHTML = `
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -2404,10 +2496,10 @@ function render() {
             btnEdit.addEventListener('click', () => startEditTransaction(t.id));
             tdAcciones.appendChild(btnEdit);
             
-            // Botón Eliminar
+            // Bot¿n Eliminar
             const btnDel = document.createElement('button');
             btnDel.className = 'btn-delete';
-            btnDel.setAttribute('aria-label', 'Eliminar transacción');
+            btnDel.setAttribute('aria-label', 'Eliminar transacci¿n');
             btnDel.innerHTML = `
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6"/>
@@ -2426,7 +2518,7 @@ function render() {
     renderTCharts();
 }
 
-// --- CREAR O EDITAR TRANSACCIÓN (FORM SUBMIT) ---
+// --- CREAR O EDITAR TRANSACCI¿N (FORM SUBMIT) ---
 
 function handleFormSubmit(e) {
     e.preventDefault();
@@ -2445,7 +2537,7 @@ function handleFormSubmit(e) {
     
     const monto = parseFloat(montoRaw);
     if (isNaN(monto) || monto <= 0) {
-        showToast('El monto debe ser un número positivo mayor que 0.', 'error');
+        showToast('El monto debe ser un n¿mero positivo mayor que 0.', 'error');
         return;
     }
     
@@ -2460,7 +2552,7 @@ function handleFormSubmit(e) {
     }
     
     if (editingTransactionId !== null) {
-        // Modo Edición
+        // Modo Edici¿n
         const idx = transactions.findIndex(t => t.id === editingTransactionId);
         if (idx !== -1) {
             transactions[idx].fecha = fecha;
@@ -2470,9 +2562,9 @@ function handleFormSubmit(e) {
             transactions[idx].monto = monto;
             
             saveTransactions();
-            showToast('Transacción modificada con éxito.', 'success');
+            showToast('Transacci¿n modificada con éxito.', 'success');
             
-            // Restablecer filtros del mes/año modificado para verlo
+            // Restablecer filtros del mes/aÑo modificado para verlo
             const [tYear, tMonth] = fecha.split('-').map(Number);
             filterMonth.value = tMonth - 1;
             filterYear.value = tYear;
@@ -2480,13 +2572,13 @@ function handleFormSubmit(e) {
             cancelEdit();
             render();
         } else {
-            showToast('No se encontró la transacción a editar.', 'error');
+            showToast('No se encontr¿ la transacci¿n a editar.', 'error');
             cancelEdit();
         }
         return;
     }
     
-    // Modo Creación (Nuevo registro)
+    // Modo Creaci¿n (Nuevo registro)
     const newTransaction = {
         id: 't-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
         fecha: fecha,
@@ -2497,17 +2589,17 @@ function handleFormSubmit(e) {
         createdAt: new Date().toISOString()
     };
     
-    // Añadir al inicio o guardar
+    // A¿adir al inicio o guardar
     transactions.push(newTransaction);
     
     // Guardar en localStorage
     saveTransactions();
     
-    // Actualizar filtro de año si ingresaron un año nuevo
+    // Actualizar filtro de aÑo si ingresaron un aÑo nuevo
     const inputYear = parseInt(fecha.split('-')[0]);
     populateYearFilter(inputYear);
     
-    // Ajustar filtros para que muestren la fecha de la transacción agregada
+    // Ajustar filtros para que muestren la fecha de la transacci¿n agregada
     const [tYear, tMonth] = fecha.split('-').map(Number);
     filterMonth.value = tMonth - 1;
     filterYear.value = tYear;
@@ -2522,13 +2614,13 @@ function handleFormSubmit(e) {
     const todayStr = getTodayString();
     inputDate.value = todayStr;
     
-    showToast('Transacción registrada con éxito.', 'success');
+    showToast('Transacci¿n registrada con éxito.', 'success');
     
     // Re-renderizar
     render();
 }
 
-// --- SOPORTE PARA EDICIÓN ---
+// --- SOPORTE PARA EDICI¿N ---
 
 function startEditTransaction(id) {
     const t = transactions.find(item => item.id === id);
@@ -2543,7 +2635,7 @@ function startEditTransaction(id) {
     inputType.value = t.tipo;
     inputCategory.value = t.categoria;
     
-    // Modificar botón de guardar cambios
+    // Modificar bot¿n de guardar cambios
     submitBtnText.textContent = 'Guardar';
     btnCancelEdit.classList.remove('hidden-btn');
     
@@ -2562,7 +2654,7 @@ function startEditTransaction(id) {
         behavior: 'smooth'
     });
     
-    showToast('Editando transacción...', 'info');
+    showToast('Editando transacci¿n...', 'info');
 }
 
 function cancelEdit() {
@@ -2590,7 +2682,7 @@ function cancelEdit() {
     `;
 }
 
-// --- ELIMINAR TRANSACCIÓN ---
+// --- ELIMINAR TRANSACCI¿N ---
 
 function requestDeleteTransaction(id) {
     const t = transactions.find(item => item.id === id);
@@ -2618,7 +2710,7 @@ function confirmDeleteTransaction() {
     
     if (transactions.length < initialCount) {
         saveTransactions();
-        showToast('Transacción eliminada correctamente.', 'success');
+        showToast('Transacci¿n eliminada correctamente.', 'success');
     }
     
     closeModal(modalDelete);
@@ -2682,7 +2774,7 @@ function downloadFullBackup() {
     showToast('Respaldo completo exportado con éxito.', 'success');
 }
 
-// 3. Generar Reporte Mensual/Anual (PDF/Impresión)
+// 3. Generar Reporte Mensual/Anual (PDF/Impresi¿n)
 function downloadMonthlyReport() {
     const isAllMonths = filterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(filterMonth.value);
@@ -2693,16 +2785,16 @@ function downloadMonthlyReport() {
     
     const translations = {
         es: {
-            noTransactionsYear: 'No hay transacciones registradas para este año.',
+            noTransactionsYear: 'No hay transacciones registradas para este aÑo.',
             noTransactionsMonth: 'No hay transacciones registradas para este mes.',
             annualReport: 'Reporte Anual de Tesorería',
             monthlyReport: 'Reporte Mensual de Tesorería',
-            subtitle: 'Detalle de ingresos y gastos de la tesorería de la iglesia',
-            period: 'Período',
+            subtitle: 'Detalle de ingresos y gastos de la tesorer¿a de la iglesia',
+            period: 'Períododo',
             generated: 'Generado el',
             totalIncome: 'Total Ingresos',
             totalExpense: 'Total Gastos',
-            annualBalance: 'Saldo del Año',
+            annualBalance: 'Saldo del A¿o',
             monthlyBalance: 'Saldo del Mes',
             date: 'Fecha',
             concept: 'Concepto',
@@ -2712,7 +2804,7 @@ function downloadMonthlyReport() {
             income: 'Ingreso',
             expense: 'Gasto',
             footer: 'Reporte de Tesorería de la Iglesia oficial - Generado de forma local y privada.',
-            transactionsTitle: 'Transacciones del período',
+            transactionsTitle: 'Transacciones del períododo',
             months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
         },
         en: {
@@ -2739,40 +2831,40 @@ function downloadMonthlyReport() {
             months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
         },
         fr: {
-            noTransactionsYear: 'Aucune transaction enregistrée pour cette année.',
-            noTransactionsMonth: 'Aucune transaction enregistrée pour ce mois.',
-            annualReport: 'Rapport Annuel de la Trésorerie',
-            monthlyReport: 'Rapport Mensuel de la Trésorerie',
-            subtitle: 'Détail des revenus et dépenses de la trésorerie de l\'église',
-            period: 'Période',
-            generated: 'Généré le',
+            noTransactionsYear: 'Aucune transaction enregistr¿e pour cette ann¿e.',
+            noTransactionsMonth: 'Aucune transaction enregistr¿e pour ce mois.',
+            annualReport: 'Rapport Annuel de la Tr¿sorerie',
+            monthlyReport: 'Rapport Mensuel de la Tr¿sorerie',
+            subtitle: 'D¿tail des revenus et d¿penses de la tr¿sorerie de l\'¿glise',
+            period: 'P¿riode',
+            generated: 'G¿n¿r¿ le',
             totalIncome: 'Total des Revenus',
-            totalExpense: 'Total des Dépenses',
-            annualBalance: 'Solde de l\'Année',
+            totalExpense: 'Total des D¿penses',
+            annualBalance: 'Solde de l\'Ann¿e',
             monthlyBalance: 'Solde du Mois',
             date: 'Date',
             concept: 'Concept',
             type: 'Type',
-            category: 'Catégorie',
+            category: 'Cat¿gorie',
             amount: 'Montant',
             income: 'Revenu',
-            expense: 'Dépense',
-            footer: 'Rapport officiel de la trésorerie de l\'église - Généré localement et en privé.',
-            transactionsTitle: 'Transactions de la période',
-            months: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+            expense: 'D¿pense',
+            footer: 'Rapport officiel de la tr¿sorerie de l\'¿glise - G¿n¿r¿ localement et en priv¿.',
+            transactionsTitle: 'Transactions de la p¿riode',
+            months: ['Janvier', 'F¿vrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Ao¿t', 'Septembre', 'Octobre', 'Novembre', 'D¿cembre']
         },
         pt: {
-            noTransactionsYear: 'Nenhuma transação registrada para este ano.',
-            noTransactionsMonth: 'Nenhuma transação registrada para este mês.',
-            annualReport: 'Relatório Anual de Tesouraria',
-            monthlyReport: 'Relatório Mensal de Tesouraria',
+            noTransactionsYear: 'Nenhuma transa¿¿o registrada para este ano.',
+            noTransactionsMonth: 'Nenhuma transa¿¿o registrada para este más.',
+            annualReport: 'Relat¿rio Anual de Tesouraria',
+            monthlyReport: 'Relat¿rio Mensal de Tesouraria',
             subtitle: 'Detalhamento de receitas e despesas da tesouraria da igreja',
-            period: 'Período',
+            period: 'Períododo',
             generated: 'Gerado em',
             totalIncome: 'Total de Receitas',
             totalExpense: 'Total de Despesas',
             annualBalance: 'Saldo do Ano',
-            monthlyBalance: 'Saldo do Mês',
+            monthlyBalance: 'Saldo do M¿s',
             date: 'Data',
             concept: 'Conceito',
             type: 'Tipo',
@@ -2780,9 +2872,9 @@ function downloadMonthlyReport() {
             amount: 'Valor',
             income: 'Receita',
             expense: 'Despesa',
-            footer: 'Relatório Oficial da Tesouraria da Igreja - Gerado localmente e de forma privada.',
-            transactionsTitle: 'Transações do período',
-            months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+            footer: 'Relat¿rio Oficial da Tesouraria da Igreja - Gerado localmente e de forma privada.',
+            transactionsTitle: 'Transa¿¿es do períododo',
+            months: ['Janeiro', 'Fevereiro', 'Mar¿o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         },
         it: {
             noTransactionsYear: 'Nessuna transazione registrata per quest\'anno.',
@@ -2808,9 +2900,9 @@ function downloadMonthlyReport() {
             months: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
         },
         de: {
-            noTransactionsYear: 'Für dieses Jahr wurden keine Transaktionen erfasst.',
-            noTransactionsMonth: 'Für diesen Monat wurden keine Transaktionen erfasst.',
-            annualReport: 'Jährlicher Kassenbericht',
+            noTransactionsYear: 'F¿r dieses Jahr wurden keine Transaktionen erfasst.',
+            noTransactionsMonth: 'F¿r diesen Monat wurden keine Transaktionen erfasst.',
+            annualReport: 'J¿hrlicher Kassenbericht',
             monthlyReport: 'Monatlicher Kassenbericht',
             subtitle: 'Details zu Einnahmen und Ausgaben der Kirchenkasse',
             period: 'Zeitraum',
@@ -2828,7 +2920,7 @@ function downloadMonthlyReport() {
             expense: 'Ausgabe',
             footer: 'Offizieller Bericht der Kirchenkasse - Lokal und privat generiert.',
             transactionsTitle: 'Transaktionen des Zeitraums',
-            months: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+            months: ['Januar', 'Februar', 'M¿rz', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
         }
     };
     
@@ -2959,12 +3051,12 @@ function downloadMonthlyReport() {
     const periodText = isAllMonths ? `${trans.period}: ${selYear}` : `${trans.months[selMonth]} ${selYear}`;
     const balanceLabel = isAllMonths ? trans.annualBalance : trans.monthlyBalance;
     
-    // Detectar si es dispositivo móvil
+    // Detectar si es dispositivo mÓvil
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
                      || (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
     
     if (isMobile) {
-        // === MÓVIL: Abrir ventana nueva con documento HTML completo e independiente ===
+        // === M¿VIL: Abrir ventana nueva con documento HTML completo e independiente ===
         const reportHTML = `<!DOCTYPE html>
 <html lang="${currentLang}">
 <head>
@@ -3134,7 +3226,7 @@ function downloadMonthlyReport() {
         if (reportWindow) {
             reportWindow.document.write(reportHTML);
             reportWindow.document.close();
-            showToast('Reporte generado. Se abrió en una nueva pestaña.', 'success');
+            showToast('Reporte generado. Se abri¿ en una nueva pesta¿a.', 'success');
         } else {
             // Fallback si el navegador bloquea pop-ups
             const blob = new Blob([reportHTML], { type: 'text/html' });
@@ -3144,11 +3236,11 @@ function downloadMonthlyReport() {
             link.target = '_blank';
             link.click();
             URL.revokeObjectURL(url);
-            showToast('Reporte generado. Si no se abrió, permite las ventanas emergentes.', 'info');
+            showToast('Reporte generado. Si no se abri¿, permite las ventanas emergentes.', 'info');
         }
         
     } else {
-        // === PC/ESCRITORIO: Método original directo con window.print() ===
+        // === PC/ESCRITORIO: M¿todo original directo con window.print() ===
         const printContainer = document.getElementById('print-report-container');
         printContainer.innerHTML = `
             <div class="print-report-wrapper">
@@ -3191,16 +3283,16 @@ function downloadMonthlyReport() {
             printContainer.innerHTML = '';
         }, 100);
         
-        showToast('Diálogo de impresión (PDF) abierto.', 'success');
+        showToast('Di¿logo de impresiÓn (PDF) abierto.', 'success');
     }
 }
 
-// 4. Importar Respaldo (Selección y Parseo)
+// 4. Importar Respaldo (Selecci¿n y Parseo)
 function handleImportCsvFile(e) {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Validar extensión
+    // Validar extensi¿n
     if (!file.name.endsWith('.csv')) {
         showToast('El archivo seleccionado debe ser de formato CSV.', 'error');
         return;
@@ -3220,14 +3312,14 @@ function handleImportCsvFile(e) {
 function parseAndValidateCsv(content) {
     parsedCsvTransactionsToImport = [];
     
-    // Separar líneas limpiando retornos de carro
+    // Separar l¿neas limpiando retornos de carro
     const lines = content.split(/\r?\n/);
     if (lines.length < 2) {
         showToast('El archivo CSV está vacío o incompleto.', 'error');
         return;
     }
     
-    // Analizar encabezado (primera línea)
+    // Analizar encabezado (primera l¿nea)
     // Buscamos: fecha,concepto,tipo,categoria,monto
     const headerLine = lines[0].replace(/^\uFEFF/, '').trim().toLowerCase(); // Quitar BOM
     const headers = headerLine.split(',');
@@ -3242,7 +3334,7 @@ function parseAndValidateCsv(content) {
     
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (!line) continue; // Saltar líneas vacías
+        if (!line) continue; // Saltar l¿neas vac¿as
         
         const row = splitCsvLine(line);
         if (row.length !== 5) {
@@ -3278,17 +3370,17 @@ function parseAndValidateCsv(content) {
     }
     
     if (validCount === 0) {
-        showToast('No se encontraron transacciones válidas en el archivo.', 'error');
+        showToast('No se encontraron transacciones v¿lidas en el archivo.', 'error');
         parsedCsvTransactionsToImport = [];
         return;
     }
     
-    // Preparar texto de estadísticas en el modal
-    let statsMessage = `Se encontraron <strong>${validCount}</strong> transacciones válidas para importar.`;
+    // Preparar texto de estad¿sticas en el modal
+    let statsMessage = `Se encontraron <strong>${validCount}</strong> transacciones v¿lidas para importar.`;
     if (errorCount > 0) {
         statsMessage += `<br><span style="color: var(--expense-color);">Se omitieron <strong>${errorCount}</strong> filas debido a errores de formato.</span>`;
     }
-    statsMessage += `<br><br>¿Estás seguro de que deseas proceder? Los datos actuales del navegador serán reemplazados por completo.`;
+    statsMessage += `<br><br>¿Est¿s seguro de que deseas proceder? Los datos actuales del navegador ser¿n reemplazados por completo.`;
     
     importStatsText.innerHTML = statsMessage;
     openModal(modalImport);
@@ -3301,7 +3393,7 @@ function executeImportCsv() {
     transactions = parsedCsvTransactionsToImport;
     saveTransactions();
     
-    // Guardar timestamp de última importación
+    // Guardar timestamp de ¿ltima importaci¿n
     localStorage.setItem('ultimaImportacion', new Date().toISOString());
     
     // Actualizar filtros
@@ -3363,7 +3455,7 @@ function escapeCSVField(val) {
     return str;
 }
 
-// Parsea una línea de CSV teniendo en cuenta campos con comillas y comas internas
+// Parsea una l¿nea de CSV teniendo en cuenta campos con comillas y comas internas
 function splitCsvLine(line) {
     const result = [];
     let curVal = '';
@@ -3431,7 +3523,7 @@ function showToast(message, type = 'success') {
     
     container.appendChild(toast);
     
-    // Desvanecer y remover después de 3s
+    // Desvanecer y remover despu¿s de 3s
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateY(10px)';
@@ -3444,7 +3536,7 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// --- SISTEMA DE CATEGORÍAS PERSONALIZABLES ---
+// --- SISTEMA DE CATEGOR¿AS PERSONALIZABLES ---
 
 function renderCategoryDatalists() {
     const tDatalist = document.getElementById('t-category-list');
@@ -3681,19 +3773,19 @@ function renderPfCharts() {
     // Verificar si Chart.js está cargado
     if (typeof Chart === 'undefined') return;
     
-    // Obtener variables de período
+    // Obtener variables de períododo
     const isAllMonths = pfFilterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(pfFilterMonth.value);
     const selYear = parseInt(pfFilterYear.value);
     
     // ----------------------------------------------------
-    // 1. CONFIGURACIÓN DEL GRÁFICO DE DONA (DONUT)
+    // 1. CONFIGURACI¿N DEL GR¿FICO DE DONA (DONUT)
     // ----------------------------------------------------
     const donutCanvas = document.getElementById('pf-donut-chart');
     const donutEmpty = document.getElementById('pf-donut-empty');
     
     if (donutCanvas) {
-        // Filtrar gastos del período seleccionado
+        // Filtrar gastos del períododo seleccionado
         const currentPeriodExpenses = personalExpenses.filter(e => {
             if (!e.fecha) return false;
             const [y, m] = e.fecha.split('-').map(Number);
@@ -3779,7 +3871,7 @@ function renderPfCharts() {
     }
     
     // ----------------------------------------------------
-    // 2. CONFIGURACIÓN DEL GRÁFICO DE BARRAS COMPARATIVO
+    // 2. CONFIGURACI¿N DEL GR¿FICO DE BARRAS COMPARATIVO
     // ----------------------------------------------------
     const barCanvas = document.getElementById('pf-bar-chart');
     if (barCanvas) {
@@ -3788,7 +3880,7 @@ function renderPfCharts() {
             pfBarChartInstance = null;
         }
         
-        // Calcular ingresos y gastos mensuales para el año seleccionado
+        // Calcular ingresos y gastos mensuales para el aÑo seleccionado
         const monthlyIncomes = Array(12).fill(0);
         const monthlyExpenses = Array(12).fill(0);
         
@@ -3904,7 +3996,7 @@ function handlePfConceptInput() {
         return;
     }
     
-    // Obtener conceptos únicos de los valores por defecto
+    // Obtener conceptos ¿nicos de los valores por defecto
     const conceptMap = new Map();
     DEFAULT_PF_CONCEPT_CATEGORIES.forEach(item => {
         conceptMap.set(normalizeText(item.concepto), {
@@ -3929,7 +4021,7 @@ function handlePfConceptInput() {
     // Buscar coincidencias parciales con el texto normalizado
     const matches = uniqueConcepts.filter(item => 
         normalizeText(item.original).includes(valNorm)
-    ).slice(0, 5); // Máximo 5 sugerencias
+    ).slice(0, 5); // M¿ximo 5 sugerencias
     
     if (matches.length > 0) {
         matches.forEach(match => {
@@ -3989,19 +4081,19 @@ function renderTCharts() {
     // Verificar si Chart.js está cargado
     if (typeof Chart === 'undefined') return;
     
-    // Obtener variables de período
+    // Obtener variables de períododo
     const isAllMonths = filterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(filterMonth.value);
     const selYear = parseInt(filterYear.value);
     
     // ----------------------------------------------------
-    // 1. CONFIGURACIÓN DEL GRÁFICO DE DONA (DONUT)
+    // 1. CONFIGURACI¿N DEL GR¿FICO DE DONA (DONUT)
     // ----------------------------------------------------
     const donutCanvas = document.getElementById('t-donut-chart');
     const donutEmpty = document.getElementById('t-donut-empty');
     
     if (donutCanvas) {
-        // Filtrar transacciones de gastos del período seleccionado
+        // Filtrar transacciones de gastos del períododo seleccionado
         const currentPeriodExpenses = transactions.filter(t => {
             if (!t.fecha || t.tipo !== 'gasto') return false;
             const [y, m] = t.fecha.split('-').map(Number);
@@ -4087,7 +4179,7 @@ function renderTCharts() {
     }
     
     // ----------------------------------------------------
-    // 2. CONFIGURACIÓN DEL GRÁFICO DE LÍNEA DE TENDENCIA
+    // 2. CONFIGURACI¿N DEL GR¿FICO DE L¿NEA DE TENDENCIA
     // ----------------------------------------------------
     const barCanvas = document.getElementById('t-bar-chart');
     if (barCanvas) {
@@ -4096,7 +4188,7 @@ function renderTCharts() {
             tBarChartInstance = null;
         }
         
-        // Calcular ingresos y gastos mensuales para el año seleccionado
+        // Calcular ingresos y gastos mensuales para el aÑo seleccionado
         const monthlyNet = Array(12).fill(0);
         
         // Cargar montos mensuales de transacciones (Ingresos - Gastos)
@@ -4203,7 +4295,7 @@ function renderTCharts() {
 
 let copilotMessages = [];
 
-// Clave API por defecto provista por el usuario para pruebas rápidas
+// Clave API por defecto provista por el usuario para pruebas r¿pidas
 const DEFAULT_GEMINI_KEY = "";
 
 function initCopilot() {
@@ -4259,7 +4351,7 @@ function initCopilot() {
                 showToast('Clave API guardada con éxito.', 'success');
             } else {
                 localStorage.removeItem('copilot_api_key');
-                showToast('Clave API eliminada. Se usará el motor local.', 'info');
+                showToast('Clave API eliminada. Se usar¿ el motor local.', 'info');
             }
             updateKeyStatusText();
             const panel = document.getElementById('copilot-settings-panel');
@@ -4280,10 +4372,10 @@ function updateKeyStatusText() {
     if (!statusText) return;
     const currentKey = localStorage.getItem('copilot_api_key');
     if (currentKey) {
-        statusText.textContent = "✓ Clave API activa. Modo IA inteligente habilitado.";
+        statusText.textContent = "? Clave API activa. Modo IA inteligente habilitado.";
         statusText.style.color = "#10b981"; // verde
     } else {
-        statusText.textContent = "⚠ Sin Clave API. Usando Modo Local básico.";
+        statusText.textContent = "? Sin Clave API. Usando Modo Local b¿sico.";
         statusText.style.color = "#f59e0b"; // naranja
     }
 }
@@ -4324,7 +4416,7 @@ function updateCopilotVisibility() {
     } else {
         copilotContainer.classList.add('hidden-element');
         document.body.classList.remove('has-copilot');
-        // Asegurar que el chat esté cerrado
+        // Asegurar que el chat está cerrado
         copilotContainer.classList.remove('active');
         const chatIcon = document.querySelector('.btn-pf-copilot-toggle .chat-icon');
         const closeIcon = document.querySelector('.btn-pf-copilot-toggle .close-icon');
@@ -4332,7 +4424,7 @@ function updateCopilotVisibility() {
         if (closeIcon) closeIcon.classList.add('hidden-element');
     }
     
-    // Sincronizar también la visibilidad del botón de scroll-to-top
+    // Sincronizar tambi¿n la visibilidad del bot¿n de scroll-to-top
     updateScrollTopButtonVisibility();
 }
 
@@ -4355,13 +4447,13 @@ function resetCopilotHistory() {
     container.innerHTML = '';
     copilotMessages = [];
     
-    const greetingText = `¡Hola! Soy tu **Copilot de Finanzas Personales** 🤖.
-Puedo analizar tus ingresos y gastos registrados de este mes para darte consejos prácticos de ahorro y responder tus preguntas.
+    const greetingText = `¿Hola! Soy tu **Copilot de Finanzas Personales** ??.
+Puedo analizar tus ingresos y gastos registrados de este mes para darte consejos pr¿cticos de ahorro y responder tus preguntas.
 
 **Prueba a preguntarme:**
-* *¿Cuál es mi saldo disponible?*
-* *¿Cuánto dinero puedo gastar en salidas en base a mi saldo?*
-* *¿Cuánto he gastado este mes y cuánto tengo pendiente?*`;
+* *¿Cu¿l es mi saldo disponible?*
+* *¿Cu¿nto dinero puedo gastar en salidas en base a mi saldo?*
+* *¿Cu¿nto he gastado este mes y cu¿nto tengo pendiente?*`;
     
     appendCopilotMessage('assistant', greetingText);
 }
@@ -4378,7 +4470,7 @@ function appendCopilotMessage(sender, text) {
     const bubble = document.createElement('div');
     bubble.className = 'copilot-message-bubble';
     
-    // Parseo básico de negritas **texto** a <strong>texto</strong> y saltos de línea
+    // Parseo b¿sico de negritas **texto** a <strong>texto</strong> y saltos de l¿nea
     let formattedText = text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>');
@@ -4472,7 +4564,7 @@ async function handleCopilotSendMessage(e) {
     let currentIncome = 0;
     let periodName = "";
     if (isAllMonths) {
-        periodName = `Todo el año ${selYear}`;
+        periodName = `Todo el aÑo ${selYear}`;
         let annualSum = 0;
         Object.keys(personalIncomes).forEach(key => {
             if (key.startsWith(`${selYear}-`)) {
@@ -4509,9 +4601,9 @@ async function handleCopilotSendMessage(e) {
             }));
             
             const systemPrompt = `Eres un asesor financiero personal experto e inteligente para el usuario.
-Tu tarea es responder preguntas personalizadas sobre su presupuesto, ingresos, gastos y saldo restante para el período seleccionado.
-A continuación se proporciona la información financiera en tiempo real extraída del sistema de su navegador:
-- Período seleccionado: ${periodName}
+Tu tarea es responder preguntas personalizadas sobre su presupuesto, ingresos, gastos y saldo restante para el períododo seleccionado.
+A continuaci¿n se proporciona la informaci¿n financiera en tiempo real extra¿da del sistema de su navegador:
+- Períododo seleccionado: ${periodName}
 - Ingreso/Presupuesto del mes: RD$ ${currentIncome.toFixed(2)}
 - Total Gastado (Ya Pagado): RD$ ${totalPaid.toFixed(2)}
 - Total Pendiente por Pagar: RD$ ${totalPending.toFixed(2)}
@@ -4520,32 +4612,32 @@ A continuación se proporciona la información financiera en tiempo real extraí
 - Lista de Gastos registrados: ${JSON.stringify(expensesListCompact)}
 
 Reglas de comportamiento:
-1. Responde siempre en español, con un tono amable, profesional, conciso y motivador.
-2. Da respuestas breves y directas, de máximo 3 o 4 oraciones a menos que te soliciten un desglose.
+1. Responde siempre en espaÑol, con un tono amable, profesional, conciso y motivador.
+2. Da respuestas breves y directas, de m¿ximo 3 o 4 oraciones a menos que te soliciten un desglose.
 3. Utiliza el formato de moneda dominicana "RD$ X,XXX.XX" para los montos.
-4. Si el usuario te pregunta cosas del tipo "¿Cuánto dinero puedo gastar en salidas en base a mi saldo disponible?", analiza:
+4. Si el usuario te pregunta cosas del tipo "¿Cu¿nto dinero puedo gastar en salidas en base a mi saldo disponible?", analiza:
    - Su saldo disponible actual.
    - Si tiene gastos pendientes de pago importantes (que reduzcan su margen real).
-   - Recomienda un límite prudente para esa categoría (por ejemplo, destinar el 10-15% del saldo disponible para no comprometer el presupuesto) y justifica la respuesta con números.
+   - Recomienda un l¿mite prudente para esa categoría (por ejemplo, destinar el 10-15% del saldo disponible para no comprometer el presupuesto) y justifica la respuesta con n¿meros.
 5. Nunca aludas a datos que no existan en el contexto proporcionado ni inventes transacciones.
-6. Si te preguntan sobre el módulo de Tesorería, aclara de forma atenta que estás diseñado exclusivamente para responder sobre el módulo de Finanzas Personales.`;
+6. Si te preguntan sobre el mÓdulo de Tesorería, aclara de forma atenta que estás dise¿ado exclusivamente para responder sobre el mÓdulo de Finanzas Personales.`;
 
             const reply = await callGeminiAPI(apiKey, systemPrompt, text);
             appendCopilotMessage('assistant', reply);
             
         } else {
-            // --- MODO LOCAL BÁSICO (REGLAS Y REGEX) ---
+            // --- MODO LOCAL B¿SICO (REGLAS Y REGEX) ---
             
-            // Simular pequeña latencia para que se sienta interactivo
+            // Simular peque¿a latencia para que se sienta interactivo
             await new Promise(resolve => setTimeout(resolve, 800));
             
             const lowerText = text.toLowerCase();
             let reply = "";
             
             if (lowerText.includes('saldo') || lowerText.includes('disponible') || lowerText.includes('balance') || lowerText.includes('cuanto tengo')) {
-                reply = `Para el período **${periodName}**, tu presupuesto de ingresos es **${formatCurrency(currentIncome)}**.\n\n` + 
+                reply = `Para el períododo **${periodName}**, tu presupuesto de ingresos es **${formatCurrency(currentIncome)}**.\n\n` + 
                         `Tu saldo disponible actual es **${formatCurrency(balance)}** (Ingreso mensual menos gastos ya pagados).\n` +
-                        `Si consideras también los gastos pendientes (${formatCurrency(totalPending)}), tu balance restante neto al final del mes sería **${formatCurrency(currentIncome - totalSpent)}**.`;
+                        `Si consideras tambi¿n los gastos pendientes (${formatCurrency(totalPending)}), tu balance restante neto al final del mes ser¿a **${formatCurrency(currentIncome - totalSpent)}**.`;
                         
             } else if (lowerText.includes('gasto') || lowerText.includes('gastado') || lowerText.includes('gastos') || lowerText.includes('pagar')) {
                 reply = `Durante **${periodName}**, tienes registrados un total de **${formatCurrency(totalSpent)}** en gastos:\n` +
@@ -4553,7 +4645,7 @@ Reglas de comportamiento:
                         `- **${formatCurrency(totalPending)}** pendientes de pago.`;
                         
             } else if (lowerText.includes('salida') || lowerText.includes('salidas') || lowerText.includes('comida') || lowerText.includes('supermercado') || lowerText.includes('entretenimiento') || lowerText.includes('gastar')) {
-                // Recomendación de salidas basada en el saldo
+                // Recomendaci¿n de salidas basada en el saldo
                 const maxSalidasRecomendado = Math.max(0, balance * 0.15); // 15% del saldo disponible
                 
                 // Buscar si hay gastos previos en categorías de salidas o comida
@@ -4565,24 +4657,24 @@ Reglas de comportamiento:
                 
                 const totalCategoria = gastosCategoria.reduce((sum, e) => sum + (parseFloat(e.monto) || 0), 0);
                 
-                reply = `Tu saldo disponible es **${formatCurrency(balance)}**. Te sugiero destinar como máximo un **15%** de este saldo para gastos discrecionales (salidas, comida fuera, entretenimiento), lo cual equivale a **${formatCurrency(maxSalidasRecomendado)}**.\n\n` +
+                reply = `Tu saldo disponible es **${formatCurrency(balance)}**. Te sugiero destinar como m¿ximo un **15%** de este saldo para gastos discrecionales (salidas, comida fuera, entretenimiento), lo cual equivale a **${formatCurrency(maxSalidasRecomendado)}**.\n\n` +
                         `Actualmente tienes registrados **${formatCurrency(totalCategoria)}** en este tipo de conceptos este mes.\n\n` +
-                        `*Recomendación:* Si planeas salir, te sugiero un límite de **${formatCurrency(Math.max(0, maxSalidasRecomendado - totalCategoria))}** para no afectar el pago de tus gastos pendientes (${formatCurrency(totalPending)}).`;
+                        `*Recomendaci¿n:* Si planeas salir, te sugiero un l¿mite de **${formatCurrency(Math.max(0, maxSalidasRecomendado - totalCategoria))}** para no afectar el pago de tus gastos pendientes (${formatCurrency(totalPending)}).`;
                         
             } else if (lowerText.includes('ayuda') || lowerText.includes('hola') || lowerText.includes('buenos dias') || lowerText.includes('buenas tardes')) {
-                reply = `¡Hola! Estoy listo para ayudarte con tu presupuesto de **${periodName}**.\n\n` +
+                reply = `¿Hola! Estoy listo para ayudarte con tu presupuesto de **${periodName}**.\n\n` +
                         `Puedes hacerme preguntas sencillas sobre tu **'saldo'**, tus **'gastos'**, o pedirme recomendaciones de **'salidas'**.\n\n` +
-                        `*Nota:* Para habilitar mi motor de Inteligencia Artificial avanzado (capaz de razonar lógicamente sobre cualquier duda), por favor haz clic en el engranaje ⚙️ de arriba e introduce tu clave API de Gemini.`;
+                        `*Nota:* Para habilitar mi motor de Inteligencia Artificial avanzado (capaz de razonar l¿gicamente sobre cualquier duda), por favor haz clic en el engranaje ?? de arriba e introduce tu clave API de Gemini.`;
             } else {
                 reply = `Entiendo tu consulta sobre tus finanzas en **${periodName}**, pero no puedo darte una respuesta detallada con mi motor local.\n\n` +
-                        `**Por favor, configura tu API Key de Gemini** haciendo clic en el engranaje ⚙️ de la cabecera. Es gratuita y me permitirá usar inteligencia artificial avanzada para analizar detalladamente tu consulta y darte una recomendación experta.`;
+                        `**Por favor, configura tu API Key de Gemini** haciendo clic en el engranaje ?? de la cabecera. Es gratuita y me permitir¿ usar inteligencia artificial avanzada para analizar detalladamente tu consulta y darte una recomendaci¿n experta.`;
             }
             
             appendCopilotMessage('assistant', reply);
         }
     } catch (err) {
         removeTypingBubble();
-        appendCopilotMessage('assistant', `⚠ Ocurrió un error al procesar tu consulta: *${err.message}*.\n\nPor favor, verifica tu conexión a Internet o revisa que tu clave API de Gemini configurada sea correcta.`);
+        appendCopilotMessage('assistant', `? Ocurri¿ un error al procesar tu consulta: *${err.message}*.\n\nPor favor, verifica tu conexi¿n a Internet o revisa que tu clave API de Gemini configurada sea correcta.`);
     } finally {
         messageInput.disabled = false;
         messageInput.focus();
@@ -4639,7 +4731,7 @@ async function callGeminiAPI(apiKey, prompt, userMessage) {
     const data = await response.json();
     const parts = data.candidates?.[0]?.content?.parts;
     if (!parts || parts.length === 0) {
-        throw new Error('No se recibió texto del modelo.');
+        throw new Error('No se recibi¿ texto del modelo.');
     }
     
     const responseText = parts.map(p => p.text).join('');
@@ -4648,8 +4740,8 @@ async function callGeminiAPI(apiKey, prompt, userMessage) {
 
 // --- SELECTOR DE IDIOMA PERSONALIZADO (GOOGLE TRANSLATE - COOKIE + RELOAD) ---
 const LANG_NAMES = {
-    es: 'Español', en: 'English', fr: 'Français',
-    pt: 'Português', it: 'Italiano', de: 'Deutsch'
+    es: 'EspaÑol', en: 'English', fr: 'Fran¿ais',
+    pt: 'Portugu¿s', it: 'Italiano', de: 'Deutsch'
 };
 
 function getCurrentLangFromCookie() {
@@ -4658,7 +4750,7 @@ function getCurrentLangFromCookie() {
 }
 
 function changeGoogleTranslateLanguage(langCode) {
-    // Escribir cookies en path raíz y dominio local
+    // Escribir cookies en path ra¿z y dominio local
     document.cookie = `googtrans=/es/${langCode}; path=/;`;
     document.cookie = `googtrans=/es/${langCode}; path=/; domain=${window.location.hostname};`;
 
@@ -4666,7 +4758,7 @@ function changeGoogleTranslateLanguage(langCode) {
     const langName = LANG_NAMES[langCode] || langCode.toUpperCase();
     showToast(`Aplicando idioma: ${langName}...`, 'info');
 
-    // Pequeño delay para que el toast sea visible, luego recargar
+    // Peque¿o delay para que el toast sea visible, luego recargar
     setTimeout(() => {
         window.location.reload();
     }, 600);
@@ -4697,7 +4789,7 @@ function initCustomLanguageSelector() {
 
     if (!triggerBtn || !dropdown) return;
 
-    // Sincronizar UI con el idioma activo (leído de la cookie)
+    // Sincronizar UI con el idioma activo (le¿do de la cookie)
     syncLanguageSelectorUI();
 
     triggerBtn.addEventListener('click', (e) => {

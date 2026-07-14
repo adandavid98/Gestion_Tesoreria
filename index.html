@@ -1,7 +1,7 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-    <!-- RedirecciÃ³n inteligente instantÃ¡nea desde el enlace viejo (GitHub Pages) al nuevo (Vercel) -->
+    <!-- Redirección inteligente instantánea desde el enlace viejo (GitHub Pages) al nuevo (Vercel) -->
     <script>
         if (window.location.hostname.indexOf('github.io') !== -1) {
             window.location.replace("https://projectai-rho.vercel.app/" + window.location.search + window.location.hash);
@@ -37,7 +37,7 @@
 
         <!-- Header -->
         <header class="main-header">
-            <div class="header-logo" id="header-logo" role="button" tabindex="0" title="Volver al MenÃº Principal">
+            <div class="header-logo" id="header-logo" role="button" tabindex="0" title="Volver al Menú Principal">
                 <div class="logo-icon">
                     <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 21h18M5 21V8l7-4 7 4v13M12 8v5M10 13h4M12 11h.01M9 21v-4a3 3 0 016 0v4"/>
@@ -48,12 +48,12 @@
                         <h1>Income Manage</h1>
                         <span id="module-indicator" class="module-indicator hidden-element"></span>
                     </div>
-                    <p>GestiÃ³n y control de ingresos, gastos y presupuestos</p>
+                    <p>Gestión y control de ingresos, gastos y presupuestos</p>
                 </div>
             </div>
             
             <div class="header-right-actions">
-                <!-- Selector de Idioma (TraducciÃ³n) -->
+                <!-- Selector de Idioma (Traducción) -->
                 <div class="custom-translate-dropdown" id="custom-translate-dropdown">
                     <button class="translate-trigger-btn" id="translate-trigger-btn" aria-label="Cambiar idioma" aria-haspopup="listbox" aria-expanded="false">
                         <div class="lang-icon">
@@ -69,10 +69,10 @@
                         </svg>
                     </button>
                     <ul class="translate-options-menu" id="translate-options-menu" role="listbox">
-                        <li data-lang="es" class="translate-option active" role="option">ES - EspaÃ±ol</li>
+                        <li data-lang="es" class="translate-option active" role="option">ES - Español</li>
                         <li data-lang="en" class="translate-option" role="option">EN - English</li>
-                        <li data-lang="fr" class="translate-option" role="option">FR - FranÃ§ais</li>
-                        <li data-lang="pt" class="translate-option" role="option">PT - PortuguÃªs</li>
+                        <li data-lang="fr" class="translate-option" role="option">FR - Français</li>
+                        <li data-lang="pt" class="translate-option" role="option">PT - Português</li>
                         <li data-lang="it" class="translate-option" role="option">IT - Italiano</li>
                         <li data-lang="de" class="translate-option" role="option">DE - Deutsch</li>
                     </ul>
@@ -84,18 +84,18 @@
                 <div id="user-profile" class="user-profile hidden-element">
                     <img id="user-photo" src="" alt="Foto de perfil">
                     <span id="user-name">Usuario</span>
-                    <button id="btn-logout" class="btn-logout" title="Cerrar sesiÃ³n">
+                    <button id="btn-logout" class="btn-logout" title="Cerrar sesión">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
                         </svg>
                     </button>
                 </div>
                 
-                <button id="btn-back-to-menu" class="btn-back-to-menu hidden-element" title="Volver al MenÃº Principal">
+                <button id="btn-back-to-menu" class="btn-back-to-menu hidden-element" title="Volver al Menú Principal">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
-                    <span>MenÃº</span>
+                    <span>Menú</span>
                 </button>
                 
                 <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Cambiar tema">
@@ -133,7 +133,7 @@
                         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
                         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                     </svg>
-                    Iniciar sesiÃ³n con Google
+                    Iniciar sesión con Google
                 </button>
                 
                 <div class="login-footer">
@@ -142,15 +142,15 @@
             </div>
         </section>
 
-        <!-- PANTALLA DE SELECCIÃ“N DE MÃ“DULOS (MENÃš PRINCIPAL) -->
+        <!-- PANTALLA DE SELECCIÓN DE MÓDULOS (MENÚ PRINCIPAL) -->
         <section id="menu-section" class="menu-section hidden-element">
             <div class="menu-header">
-                <h2>Â¿QuÃ© mÃ³dulo deseas utilizar hoy?</h2>
-                <p>Selecciona una opciÃ³n para comenzar a gestionar tus finanzas</p>
+                <h2>¿Qué módulo deseas utilizar hoy?</h2>
+                <p>Selecciona una opción para comenzar a gestionar tus finanzas</p>
             </div>
             
             <div class="menu-grid">
-                <!-- BotÃ³n MÃ³dulo 1: TesorerÃ­a -->
+                <!-- Botón Módulo 1: Tesorería -->
                 <button id="btn-goto-tesoreria" class="menu-card card-glow-green">
                     <div class="menu-card-icon-wrapper">
                         <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2">
@@ -158,7 +158,7 @@
                         </svg>
                     </div>
                     <div class="menu-card-info">
-                        <h3>TesorerÃ­a</h3>
+                        <h3>Tesorería</h3>
                         <p>Control de ingresos, gastos, ofrendas y reportes mensuales de la iglesia.</p>
                     </div>
                     <div class="menu-card-arrow">
@@ -168,7 +168,7 @@
                     </div>
                 </button>
 
-                <!-- BotÃ³n MÃ³dulo 2: Finanzas Personales -->
+                <!-- Botón Módulo 2: Finanzas Personales -->
                 <button id="btn-goto-personales" class="menu-card card-glow-purple">
                     <div class="menu-card-icon-wrapper">
                         <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2">
@@ -189,9 +189,9 @@
             </div>
         </section>
 
-        <!-- CONTENEDOR DEL MÃ“DULO DE FINANZAS PERSONALES -->
+        <!-- CONTENEDOR DEL MÓDULO DE FINANZAS PERSONALES -->
         <div id="personal-finances-container" class="personal-finances-container hidden-element">
-            <!-- TÃ­tulo y Filtros -->
+            <!-- Título y Filtros -->
             <div class="pf-header-section" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
                 <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-color);">Resumen de Finanzas</h2>
                 <div class="filters-container">
@@ -210,8 +210,8 @@
                         <option value="10">Noviembre</option>
                         <option value="11">Diciembre</option>
                     </select>
-                    <select id="pf-filter-year" aria-label="Seleccionar aÃ±o de finanzas personales">
-                        <!-- Generado dinÃ¡micamente -->
+                    <select id="pf-filter-year" aria-label="Seleccionar año de finanzas personales">
+                        <!-- Generado dinámicamente -->
                     </select>
                 </div>
             </div>
@@ -311,7 +311,7 @@
                             <input type="number" id="pf-amount" placeholder="0.00" step="0.01" min="0.01" required>
                         </div>
                         <div class="form-group flex-1">
-                            <label for="pf-category">CategorÃ­a</label>
+                            <label for="pf-category">Categoría</label>
                             <input type="text" id="pf-category" placeholder="Ej: Comida, Servicios" list="pf-category-list">
                             <datalist id="pf-category-list"></datalist>
                         </div>
@@ -346,17 +346,17 @@
                     </form>
                 </section>
 
-                <!-- SecciÃ³n de GrÃ¡ficos AnalÃ­ticos -->
+                <!-- Sección de Gráficos Analíticos -->
                 <div class="pf-charts-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 24px;">
                     <section class="section-card pf-chart-card">
                         <div class="pf-chart-header" style="margin-bottom: 15px;">
-                            <h2 style="font-size: 11pt; font-weight: 600; color: var(--text-color);">DistribuciÃ³n de Gastos</h2>
-                            <p style="font-size: 8pt; color: var(--text-muted); margin-top: 2px;">DistribuciÃ³n por categorÃ­a (Mes Seleccionado)</p>
+                            <h2 style="font-size: 11pt; font-weight: 600; color: var(--text-color);">Distribución de Gastos</h2>
+                            <p style="font-size: 8pt; color: var(--text-muted); margin-top: 2px;">Distribución por categoría (Mes Seleccionado)</p>
                         </div>
                         <div style="position: relative; height: 260px; display: flex; align-items: center; justify-content: center;">
                             <canvas id="pf-donut-chart"></canvas>
                             <div id="pf-donut-empty" class="empty-state hidden-element" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: var(--card-bg);">
-                                <p style="font-size: 9.5pt; color: var(--text-muted);">No hay gastos registrados en este perÃ­odo.</p>
+                                <p style="font-size: 9.5pt; color: var(--text-muted);">No hay gastos registrados en este período.</p>
                             </div>
                         </div>
                     </section>
@@ -364,7 +364,7 @@
                     <section class="section-card pf-chart-card">
                         <div class="pf-chart-header" style="margin-bottom: 15px;">
                             <h2 style="font-size: 11pt; font-weight: 600; color: var(--text-color);">Comparativo Mensual</h2>
-                            <p style="font-size: 8pt; color: var(--text-muted); margin-top: 2px;">Presupuesto vs. Gastos (AÃ±o Seleccionado)</p>
+                            <p style="font-size: 8pt; color: var(--text-muted); margin-top: 2px;">Presupuesto vs. Gastos (Año Seleccionado)</p>
                         </div>
                         <div style="position: relative; height: 260px; display: flex; align-items: center; justify-content: center;">
                             <canvas id="pf-bar-chart"></canvas>
@@ -374,25 +374,25 @@
 
                 <!-- Columnas de Gastos Fijos y Variables -->
                 <div class="pf-expenses-columns">
-                    <!-- SecciÃ³n de Gastos Fijos -->
+                    <!-- Sección de Gastos Fijos -->
                     <section class="section-card pf-column-card">
                         <div class="pf-column-header">
                             <h2>Gastos Fijos</h2>
                             <span class="pf-badge pf-badge-fixed" id="pf-fixed-count">0 items</span>
                         </div>
                         <div class="pf-expense-list" id="pf-fixed-list">
-                            <!-- Inyectado dinÃ¡micamente -->
+                            <!-- Inyectado dinámicamente -->
                         </div>
                     </section>
 
-                    <!-- SecciÃ³n de Gastos Variables -->
+                    <!-- Sección de Gastos Variables -->
                     <section class="section-card pf-column-card">
                         <div class="pf-column-header">
                             <h2>Gastos Variables / Imprevistos</h2>
                             <span class="pf-badge pf-badge-variable" id="pf-variable-count">0 items</span>
                         </div>
                         <div class="pf-expense-list" id="pf-variable-list">
-                            <!-- Inyectado dinÃ¡micamente -->
+                            <!-- Inyectado dinámicamente -->
                         </div>
                     </section>
                 </div>
@@ -424,7 +424,7 @@
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                         </svg>
-                        Configurar CategorÃ­as
+                        Configurar Categorías
                     </button>
                     <input type="file" id="pf-csv-file-input" accept=".csv, text/csv, application/vnd.ms-excel, text/plain" class="hidden-file-input" aria-hidden="true">
                     
@@ -439,12 +439,12 @@
             </section>
         </div>
 
-        <!-- Contenedor del Dashboard principal (oculto antes de iniciar sesiÃ³n) -->
+        <!-- Contenedor del Dashboard principal (oculto antes de iniciar sesión) -->
         <div id="dashboard-container" class="dashboard-container hidden-element">
 
-        <!-- Formulario Registrar TransacciÃ³n -->
+        <!-- Formulario Registrar Transacción -->
         <section class="section-card form-section">
-            <h2>Registrar transacciÃ³n</h2>
+            <h2>Registrar transacción</h2>
             <form id="transaction-form" class="transaction-form" novalidate>
                 <div class="form-group flex-1">
                     <label for="t-date">Fecha</label>
@@ -469,7 +469,7 @@
                     </select>
                 </div>
                 <div class="form-group flex-1">
-                    <label for="t-category">CategorÃ­a</label>
+                    <label for="t-category">Categoría</label>
                     <input type="text" id="t-category" placeholder="Ej: recibo, factura..." required>
                 </div>
                 <div class="form-group-btn form-actions-row">
@@ -487,25 +487,25 @@
             </form>
         </section>
 
-        <!-- SecciÃ³n de GrÃ¡ficos AnalÃ­ticos de TesorerÃ­a -->
+        <!-- Sección de Gráficos Analíticos de Tesorería -->
         <div class="t-charts-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 24px;">
             <section class="section-card t-chart-card">
                 <div class="t-chart-header" style="margin-bottom: 15px;">
-                    <h2 style="font-size: 11pt; font-weight: 600; color: var(--text-color);">DistribuciÃ³n de Gastos</h2>
-                    <p style="font-size: 8pt; color: var(--text-muted); margin-top: 2px;">DistribuciÃ³n por categorÃ­a (Mes Seleccionado)</p>
+                    <h2 style="font-size: 11pt; font-weight: 600; color: var(--text-color);">Distribución de Gastos</h2>
+                    <p style="font-size: 8pt; color: var(--text-muted); margin-top: 2px;">Distribución por categoría (Mes Seleccionado)</p>
                 </div>
                 <div style="position: relative; height: 260px; display: flex; align-items: center; justify-content: center;">
                     <canvas id="t-donut-chart"></canvas>
                     <div id="t-donut-empty" class="empty-state hidden-element" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: var(--card-bg);">
-                        <p style="font-size: 9.5pt; color: var(--text-muted);">No hay gastos registrados en este perÃ­odo.</p>
+                        <p style="font-size: 9.5pt; color: var(--text-muted);">No hay gastos registrados en este período.</p>
                     </div>
                 </div>
             </section>
             
             <section class="section-card t-chart-card">
                 <div class="t-chart-header" style="margin-bottom: 15px;">
-                    <h2 style="font-size: 11pt; font-weight: 600; color: var(--text-color);">EvoluciÃ³n del Balance</h2>
-                    <p style="font-size: 8pt; color: var(--text-muted); margin-top: 2px;">Balance acumulado (AÃ±o Seleccionado)</p>
+                    <h2 style="font-size: 11pt; font-weight: 600; color: var(--text-color);">Evolución del Balance</h2>
+                    <p style="font-size: 8pt; color: var(--text-muted); margin-top: 2px;">Balance acumulado (Año Seleccionado)</p>
                 </div>
                 <div style="position: relative; height: 260px; display: flex; align-items: center; justify-content: center;">
                     <canvas id="t-bar-chart"></canvas>
@@ -533,8 +533,8 @@
                         <option value="10">Noviembre</option>
                         <option value="11">Diciembre</option>
                     </select>
-                    <select id="filter-year" aria-label="Seleccionar aÃ±o">
-                        <!-- Generado dinÃ¡micamente -->
+                    <select id="filter-year" aria-label="Seleccionar año">
+                        <!-- Generado dinámicamente -->
                     </select>
                 </div>
             </div>
@@ -578,7 +578,7 @@
                         <p id="total-balance" class="amount bold">RD$0.00</p>
                     </div>
                 </div>
-                <!-- Card Saldo HistÃ³rico -->
+                <!-- Card Saldo Histórico -->
                 <div class="summary-card card-historical-balance">
                     <div class="card-icon">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
@@ -587,7 +587,7 @@
                         </svg>
                     </div>
                     <div class="card-info">
-                        <h3>Saldo histÃ³rico</h3>
+                        <h3>Saldo histórico</h3>
                         <p id="historical-balance" class="amount bold">RD$0.00</p>
                     </div>
                 </div>
@@ -604,17 +604,17 @@
                             <th>Fecha</th>
                             <th>Concepto</th>
                             <th>Tipo</th>
-                            <th>CategorÃ­a</th>
+                            <th>Categoría</th>
                             <th>Monto</th>
                             <th class="text-right">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="transactions-body">
-                        <!-- Las transacciones se renderizan aquÃ­ -->
+                        <!-- Las transacciones se renderizan aquí -->
                     </tbody>
                 </table>
             </div>
-            <!-- Estado vacÃ­o -->
+            <!-- Estado vacío -->
             <div id="empty-state" class="empty-state">
                 <p id="label-empty-state">No hay transacciones registradas para este mes.</p>
             </div>
@@ -646,7 +646,7 @@
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                     </svg>
-                    Configurar CategorÃ­as
+                    Configurar Categorías
                 </button>
                 <input type="file" id="csv-file-input" accept=".csv, text/csv, application/vnd.ms-excel, text/plain" class="hidden-file-input" aria-hidden="true">
                 
@@ -667,17 +667,17 @@
         </footer>
     </div>
 
-    <!-- MODAL: Eliminar TransacciÃ³n -->
+    <!-- MODAL: Eliminar Transacción -->
     <div id="modal-delete" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-header">
-                <h3>Eliminar transacciÃ³n</h3>
+                <h3>Eliminar transacción</h3>
                 <button class="modal-close-btn" aria-label="Cerrar">&times;</button>
             </div>
             <div class="modal-body">
-                <p>Â¿EstÃ¡s seguro de que deseas eliminar esta transacciÃ³n? Esta acciÃ³n no se puede deshacer.</p>
+                <p>¿Estás seguro de que deseas eliminar esta transacción? Esta acción no se puede deshacer.</p>
                 <div class="transaction-detail-box" id="delete-detail-box">
-                    <!-- Rellenado dinÃ¡micamente -->
+                    <!-- Rellenado dinámicamente -->
                 </div>
             </div>
             <div class="modal-footer">
@@ -687,11 +687,11 @@
         </div>
     </div>
 
-    <!-- MODAL: Confirmar ImportaciÃ³n -->
+    <!-- MODAL: Confirmar Importación -->
     <div id="modal-import" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-header">
-                <h3>Confirmar importaciÃ³n de respaldo</h3>
+                <h3>Confirmar importación de respaldo</h3>
                 <button class="modal-close-btn" aria-label="Cerrar">&times;</button>
             </div>
             <div class="modal-body">
@@ -699,9 +699,9 @@
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                     </svg>
-                    <span>Â¡AtenciÃ³n! La importaciÃ³n de datos reemplazarÃ¡ todas las transacciones actuales en este navegador. Se recomienda exportar un respaldo primero.</span>
+                    <span>¡Atención! La importación de datos reemplazará todas las transacciones actuales en este navegador. Se recomienda exportar un respaldo primero.</span>
                 </div>
-                <p id="import-stats-text">Â¿Deseas continuar con la importaciÃ³n?</p>
+                <p id="import-stats-text">¿Deseas continuar con la importación?</p>
             </div>
             <div class="modal-footer">
                 <button class="btn-neutral" id="btn-import-cancel">Cancelar</button>
@@ -722,9 +722,9 @@
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                     </svg>
-                    <span>Esta operaciÃ³n borrarÃ¡ de forma permanente todas las transacciones registradas. AsegÃºrate de haber exportado un respaldo si deseas conservarlas.</span>
+                    <span>Esta operación borrará de forma permanente todas las transacciones registradas. Asegúrate de haber exportado un respaldo si deseas conservarlas.</span>
                 </div>
-                <p>Â¿EstÃ¡s completamente seguro de que deseas limpiar los datos?</p>
+                <p>¿Estás completamente seguro de que deseas limpiar los datos?</p>
             </div>
             <div class="modal-footer">
                 <button class="btn-neutral" id="btn-clear-cancel">Cancelar</button>
@@ -733,11 +733,11 @@
         </div>
     </div>
 
-    <!-- MODAL: Confirmar ImportaciÃ³n Finanzas Personales -->
+    <!-- MODAL: Confirmar Importación Finanzas Personales -->
     <div id="modal-pf-import" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-header">
-                <h3>Confirmar importaciÃ³n de finanzas personales</h3>
+                <h3>Confirmar importación de finanzas personales</h3>
                 <button class="modal-close-btn" aria-label="Cerrar">&times;</button>
             </div>
             <div class="modal-body">
@@ -745,9 +745,9 @@
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                     </svg>
-                    <span>Â¡AtenciÃ³n! La importaciÃ³n de datos reemplazarÃ¡ todos tus gastos y presupuesto de finanzas personales actuales. Se recomienda exportar un respaldo primero.</span>
+                    <span>¡Atención! La importación de datos reemplazará todos tus gastos y presupuesto de finanzas personales actuales. Se recomienda exportar un respaldo primero.</span>
                 </div>
-                <p id="pf-import-stats-text">Â¿Deseas continuar con la importaciÃ³n?</p>
+                <p id="pf-import-stats-text">¿Deseas continuar con la importación?</p>
             </div>
             <div class="modal-footer">
                 <button class="btn-neutral" id="btn-pf-import-cancel">Cancelar</button>
@@ -768,9 +768,9 @@
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                     </svg>
-                    <span>Esta operaciÃ³n borrarÃ¡ de forma permanente todos tus gastos personales y tu presupuesto. AsegÃºrate de haber exportado un respaldo si deseas conservarlos.</span>
+                    <span>Esta operación borrará de forma permanente todos tus gastos personales y tu presupuesto. Asegúrate de haber exportado un respaldo si deseas conservarlos.</span>
                 </div>
-                <p>Â¿EstÃ¡s completamente seguro de que deseas limpiar tus datos de finanzas personales?</p>
+                <p>¿Estás completamente seguro de que deseas limpiar tus datos de finanzas personales?</p>
             </div>
             <div class="modal-footer">
                 <button class="btn-neutral" id="btn-pf-clear-cancel">Cancelar</button>
@@ -779,33 +779,33 @@
         </div>
     </div>
 
-    <!-- MODAL: Administrar CategorÃ­as -->
+    <!-- MODAL: Administrar Categorías -->
     <div id="modal-manage-categories" class="modal-overlay">
         <div class="modal-container" style="max-width: 500px;">
             <div class="modal-header">
-                <h3 id="mc-modal-title">Configurar CategorÃ­as</h3>
+                <h3 id="mc-modal-title">Configurar Categorías</h3>
                 <button class="modal-close-btn" aria-label="Cerrar">&times;</button>
             </div>
             <div class="modal-body" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
                 <div class="category-list-container" id="mc-category-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
-                    <!-- Se inyecta la lista de categorÃ­as dinÃ¡micamente -->
+                    <!-- Se inyecta la lista de categorías dinámicamente -->
                 </div>
                 
                 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
                 
-                <h4 id="mc-form-title" style="font-size: 11pt; font-weight: 600; margin-bottom: 12px; color: var(--text-color);">Agregar Nueva CategorÃ­a</h4>
+                <h4 id="mc-form-title" style="font-size: 11pt; font-weight: 600; margin-bottom: 12px; color: var(--text-color);">Agregar Nueva Categoría</h4>
                 <form id="mc-category-form" style="display: flex; flex-direction: column; gap: 12px;">
                     <input type="hidden" id="mc-category-index" value="-1">
                     
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label for="mc-category-name" style="font-size: 9pt; margin-bottom: 4px; font-weight: 500;">Nombre de la CategorÃ­a</label>
+                        <label for="mc-category-name" style="font-size: 9pt; margin-bottom: 4px; font-weight: 500;">Nombre de la Categoría</label>
                         <input type="text" id="mc-category-name" placeholder="Ej: Supermercado, Ofrenda..." required style="height: 38px;">
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 9pt; margin-bottom: 6px; font-weight: 500; display: block;">Color de la CategorÃ­a</label>
+                        <label style="font-size: 9pt; margin-bottom: 6px; font-weight: 500; display: block;">Color de la Categoría</label>
                         <div class="color-picker-grid" id="mc-color-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-top: 5px;">
-                            <!-- Inyectado dinÃ¡micamente -->
+                            <!-- Inyectado dinámicamente -->
                         </div>
                         <input type="hidden" id="mc-selected-color" value="#10b981">
                     </div>
@@ -823,7 +823,7 @@
 
     <!-- COPILOT DE FINANZAS PERSONALES -->
     <div id="pf-copilot-container" class="pf-copilot-container hidden-element">
-        <!-- BotÃ³n flotante -->
+        <!-- Botón flotante -->
         <button id="btn-pf-copilot-toggle" class="btn-pf-copilot-toggle" aria-label="Abrir Copilot de Finanzas" title="Abrir Copilot de Finanzas">
             <svg class="chat-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -838,10 +838,10 @@
         <div id="pf-copilot-chat-window" class="pf-copilot-chat-window">
             <div class="copilot-header">
                 <div class="copilot-header-info">
-                    <div class="copilot-avatar">ðŸ¤–</div>
+                    <div class="copilot-avatar">🤖</div>
                     <div>
                         <h3>Finanzas Copilot</h3>
-                        <span class="status-indicator online">En lÃ­nea</span>
+                        <span class="status-indicator online">En línea</span>
                     </div>
                 </div>
                 <div class="copilot-header-actions">
@@ -857,9 +857,9 @@
                 </div>
             </div>
 
-            <!-- Panel de ConfiguraciÃ³n de API Key -->
+            <!-- Panel de Configuración de API Key -->
             <div id="copilot-settings-panel" class="copilot-settings-panel hidden-element">
-                <h4>ConfiguraciÃ³n de API Key</h4>
+                <h4>Configuración de API Key</h4>
                 <p>Ingresa tu clave de Gemini API para activar las respuestas avanzadas con IA. Puedes obtener una gratis en <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>.</p>
                 <div class="settings-form-group">
                     <input type="password" id="copilot-api-key-input" placeholder="Introduce tu Gemini API Key...">
@@ -870,12 +870,12 @@
 
             <!-- Zona de Mensajes -->
             <div id="copilot-messages-container" class="copilot-messages-container">
-                <!-- Se inyectan los mensajes dinÃ¡micamente -->
+                <!-- Se inyectan los mensajes dinámicamente -->
             </div>
 
             <!-- Formulario de Entrada -->
             <form id="copilot-input-form" class="copilot-input-form">
-                <input type="text" id="copilot-message-input" placeholder="PregÃºntame sobre tus finanzas..." required autocomplete="off">
+                <input type="text" id="copilot-message-input" placeholder="Pregúntame sobre tus finanzas..." required autocomplete="off">
                 <button type="submit" id="btn-copilot-send" aria-label="Enviar">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"/>
@@ -889,17 +889,17 @@
     <!-- Mensajes Toast para Notificaciones -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Contenedor para impresiÃ³n de Reporte PDF -->
+    <!-- Contenedor para impresión de Reporte PDF -->
     <div id="print-report-container" class="print-only"></div>
 
-    <!-- BotÃ³n de Subir al Inicio -->
+    <!-- Botón de Subir al Inicio -->
     <button id="btn-scroll-top" class="btn-scroll-top" aria-label="Subir al inicio" title="Subir al inicio">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="18 15 12 9 6 15"/>
         </svg>
     </button>
 
-    <!-- Script de InicializaciÃ³n de Google Translate -->
+    <!-- Script de Inicialización de Google Translate -->
     <script type="text/javascript">
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({
