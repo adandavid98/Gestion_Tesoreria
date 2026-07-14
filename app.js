@@ -265,6 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 3. Inicializar selector de idioma personalizado
     initCustomLanguageSelector();
+    
+    // 4. Inicializar Copilot de Finanzas
+    initCopilot();
 });
 
 // --- ESCUCHAR ESTADO DE AUTENTICACIÓN ---
@@ -328,9 +331,7 @@ onAuthStateChanged(auth, async (user) => {
         personalFinancesContainer.classList.add('hidden-element');
         if (btnBackToMenu) btnBackToMenu.classList.add('hidden-element');
         
-        // Sincronizar visibilidad del botón de subir al inicio al desautenticar
-        updateScrollTopButtonVisibility();
-        
+        updateCopilotVisibility();
         render();
     }
 });
@@ -660,8 +661,7 @@ function showModule(moduleName) {
         renderPersonalFinances();
     }
     
-    // Sincronizar visibilidad del botón de subir al inicio al cambiar de vista
-    updateScrollTopButtonVisibility();
+    updateCopilotVisibility();
 }
 
 async function checkAndClonePfExpenses(selYear, selMonth) {
@@ -1150,8 +1150,153 @@ async function deletePersonalExpense(id) {
 // --- ACCIONES FINANZAS PERSONALES: REPORTES Y RESPALDOS ---
 
 function downloadPfReport() {
+    const currentLang = getCurrentLangFromCookie();
+    
+    const translations = {
+        es: {
+            noExpensesRegistered: 'No hay gastos personales registrados para generar el reporte.',
+            noExpensesPeriod: 'No hay gastos registrados en el período seleccionado.',
+            reportTitle: 'Reporte de Finanzas Personales',
+            subtitle: 'Control de gastos y presupuesto personal',
+            period: 'Período',
+            generated: 'Generado',
+            budget: 'Ingreso / Presupuesto',
+            totalPaid: 'Total Pagado',
+            totalPending: 'Total Pendiente',
+            availableBalance: 'Saldo Disponible',
+            fixedExpenses: 'Gastos Fijos',
+            variableExpenses: 'Gastos Variables / Imprevistos',
+            date: 'Fecha',
+            concept: 'Concepto',
+            status: 'Estado',
+            amount: 'Monto',
+            paid: 'PAGADO',
+            pending: 'PENDIENTE',
+            noRecords: 'No hay registros en esta sección',
+            footer: 'Reporte de Finanzas Personales - Generado localmente y de forma privada por Income Manage.',
+            months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+        },
+        en: {
+            noExpensesRegistered: 'No personal expenses registered to generate report.',
+            noExpensesPeriod: 'No expenses registered in the selected period.',
+            reportTitle: 'Personal Finances Report',
+            subtitle: 'Expense control and personal budget',
+            period: 'Period',
+            generated: 'Generated',
+            budget: 'Income / Budget',
+            totalPaid: 'Total Paid',
+            totalPending: 'Total Pending',
+            availableBalance: 'Available Balance',
+            fixedExpenses: 'Fixed Expenses',
+            variableExpenses: 'Variable / Unexpected Expenses',
+            date: 'Date',
+            concept: 'Concept',
+            status: 'Status',
+            amount: 'Amount',
+            paid: 'PAID',
+            pending: 'PENDING',
+            noRecords: 'No records in this section',
+            footer: 'Personal Finances Report - Generated locally and privately by Income Manage.',
+            months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        },
+        fr: {
+            noExpensesRegistered: 'Aucune dépense personnelle enregistrée pour générer le rapport.',
+            noExpensesPeriod: 'Aucune dépense enregistrée sur la période sélectionnée.',
+            reportTitle: 'Rapport de Finances Personnelles',
+            subtitle: 'Contrôle des dépenses et budget personnel',
+            period: 'Période',
+            generated: 'Généré le',
+            budget: 'Revenu / Budget',
+            totalPaid: 'Total Payé',
+            totalPending: 'Total En Attente',
+            availableBalance: 'Solde Disponible',
+            fixedExpenses: 'Dépenses Fixes',
+            variableExpenses: 'Dépenses Variables / Imprévues',
+            date: 'Date',
+            concept: 'Concept',
+            status: 'Statut',
+            amount: 'Montant',
+            paid: 'PAYÉ',
+            pending: 'EN ATTENTE',
+            noRecords: 'Aucun enregistrement dans cette section',
+            footer: 'Rapport de Finances Personnelles - Généré localement et en toute confidentialité par Income Manage.',
+            months: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+        },
+        pt: {
+            noExpensesRegistered: 'Nenhuma despesa pessoal registrada para gerar o relatório.',
+            noExpensesPeriod: 'Nenhuma despesa registrada no período selecionado.',
+            reportTitle: 'Relatório de Finanças Pessoais',
+            subtitle: 'Controle de despesas e orçamento pessoal',
+            period: 'Período',
+            generated: 'Gerado em',
+            budget: 'Renda / Orçamento',
+            totalPaid: 'Total Pago',
+            totalPending: 'Total Pendente',
+            availableBalance: 'Saldo Disponível',
+            fixedExpenses: 'Despesas Fixas',
+            variableExpenses: 'Despesas Variáveis / Imprevistas',
+            date: 'Data',
+            concept: 'Conceito',
+            status: 'Status',
+            amount: 'Valor',
+            paid: 'PAGO',
+            pending: 'PENDENTE',
+            noRecords: 'Nenhum registro nesta seção',
+            footer: 'Relatório de Finanças Pessoais - Gerado localmente e de forma privada por Income Manage.',
+            months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        },
+        it: {
+            noExpensesRegistered: 'Nessuna spesa personale registrata per generare il report.',
+            noExpensesPeriod: 'Nessuna spesa registrata nel periodo selezionato.',
+            reportTitle: 'Rapporto sulle Finanze Personali',
+            subtitle: 'Controllo delle spese e bilancio personale',
+            period: 'Periodo',
+            generated: 'Generato il',
+            budget: 'Entrate / Budget',
+            totalPaid: 'Totale Pagato',
+            totalPending: 'Totale In Sospeso',
+            availableBalance: 'Saldo Disponibile',
+            fixedExpenses: 'Spese Fisse',
+            variableExpenses: 'Spese Variabili / Impreviste',
+            date: 'Data',
+            concept: 'Concetto',
+            status: 'Stato',
+            amount: 'Importo',
+            paid: 'PAGATO',
+            pending: 'IN ATTESA',
+            noRecords: 'Nessun record in questa sezione',
+            footer: 'Rapporto sulle Finanze Personali - Generato localmente e privatamente da Income Manage.',
+            months: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+        },
+        de: {
+            noExpensesRegistered: 'Keine persönlichen Ausgaben registriert, um den Bericht zu erstellen.',
+            noExpensesPeriod: 'Keine Ausgaben im ausgewählten Zeitraum registriert.',
+            reportTitle: 'Persönlicher Finanzbericht',
+            subtitle: 'Ausgabenkontrolle und persönliches Budget',
+            period: 'Zeitraum',
+            generated: 'Erstellt am',
+            budget: 'Einnahmen / Budget',
+            totalPaid: 'Gesamt Bezahlt',
+            totalPending: 'Gesamt Ausstehend',
+            availableBalance: 'Verfügbares Guthaben',
+            fixedExpenses: 'Fixkosten',
+            variableExpenses: 'Variable / Unerwartete Ausgaben',
+            date: 'Datum',
+            concept: 'Konzept',
+            status: 'Status',
+            amount: 'Betrag',
+            paid: 'BEZAHLT',
+            pending: 'AUSSTEHEND',
+            noRecords: 'Keine Einträge in diesem Bereich',
+            footer: 'Persönlicher Finanzbericht - Lokal und privat von Income Manage generiert.',
+            months: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+        }
+    };
+    
+    const trans = translations[currentLang] || translations.es;
+
     if (personalExpenses.length === 0) {
-        showToast('No hay gastos personales registrados para generar el reporte.', 'error');
+        showToast(trans.noExpensesRegistered, 'error');
         return;
     }
     
@@ -1167,7 +1312,7 @@ function downloadPfReport() {
     });
     
     if (filteredExpenses.length === 0) {
-        showToast('No hay gastos registrados en el período seleccionado.', 'error');
+        showToast(trans.noExpensesPeriod, 'error');
         return;
     }
     
@@ -1181,6 +1326,7 @@ function downloadPfReport() {
         if (e.estado === 'pagado') totalPaid += amt;
         else totalPending += amt;
     });
+    
     // Obtener presupuesto/ingreso según el filtro
     let currentIncome = 0;
     if (isAllMonths) {
@@ -1201,19 +1347,18 @@ function downloadPfReport() {
     
     const dateToday = getTodayString().split('-').reverse().join('/');
     
-    const monthsNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    const periodText = isAllMonths ? `Año ${selYear}` : `${monthsNames[selMonth]} ${selYear}`;
+    const periodText = isAllMonths ? `${selYear}` : `${trans.months[selMonth]} ${selYear}`;
     
     // Generar las filas de las tablas
     const makeTableRows = (items) => {
         if (items.length === 0) {
-            return `<tr><td colspan="4" style="text-align:center; color:#777777; padding:12px;">No hay registros en esta sección</td></tr>`;
+            return `<tr><td colspan="4" style="text-align:center; color:#777777; padding:12px;">${trans.noRecords}</td></tr>`;
         }
         return items.map(item => `
             <tr>
                 <td style="padding:8px; border-bottom:1px solid #dddddd; font-size:9pt;">${formatDateString(item.fecha)}</td>
                 <td style="padding:8px; border-bottom:1px solid #dddddd; font-size:9pt;">${item.concepto}</td>
-                <td style="padding:8px; border-bottom:1px solid #dddddd; font-size:9pt;"><span class="print-badge" style="padding: 2px 6px; border-radius: 4px; font-size: 7.5pt; font-weight: 600; text-transform: uppercase; border: 1px solid ${item.estado === 'pagado' ? '#ffbdad' : '#abf5d1'}; background-color: ${item.estado === 'pagado' ? '#ffebe6' : '#e3fcef'}; color: ${item.estado === 'pagado' ? '#bf2600' : '#006644'};">${item.estado === 'pagado' ? 'PAGADO' : 'PENDIENTE'}</span></td>
+                <td style="padding:8px; border-bottom:1px solid #dddddd; font-size:9pt;"><span class="print-badge" style="padding: 2px 6px; border-radius: 4px; font-size: 7.5pt; font-weight: 600; text-transform: uppercase; border: 1px solid ${item.estado === 'pagado' ? '#ffbdad' : '#abf5d1'}; background-color: ${item.estado === 'pagado' ? '#ffebe6' : '#e3fcef'}; color: ${item.estado === 'pagado' ? '#bf2600' : '#006644'};">${item.estado === 'pagado' ? trans.paid : trans.pending}</span></td>
                 <td style="padding:8px; border-bottom:1px solid #dddddd; font-size:9pt; text-align:right; font-weight:600; color: ${item.estado === 'pagado' ? '#bf2600' : '#f59e0b'};">
                     ${formatCurrency(item.monto).replace('RD$', 'RD$ ')}
                 </td>
@@ -1248,17 +1393,17 @@ function downloadPfReport() {
             contentHTML += `
                 <div class="print-month-section" style="margin-top: 30px; page-break-inside: avoid;">
                     <h2 style="font-size: 14pt; font-weight: 700; color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; margin-bottom: 15px;">
-                        ${monthsNames[mKey]} ${selYear}
+                        ${trans.months[mKey]} ${selYear}
                     </h2>
                     
-                    <div class="print-section-title" style="font-size: 11pt; font-weight: 600; margin-top: 10px; margin-bottom: 8px; color: #333333;">Gastos Fijos</div>
+                    <div class="print-section-title" style="font-size: 11pt; font-weight: 600; margin-top: 10px; margin-bottom: 8px; color: #333333;">${trans.fixedExpenses}</div>
                     <table class="print-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
                         <thead>
                             <tr style="background-color: #f8f9fa;">
-                                <th style="width: 15%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">Fecha</th>
-                                <th style="width: 50%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">Concepto</th>
-                                <th style="width: 15%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">Estado</th>
-                                <th style="width: 20%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:right;">Monto</th>
+                                <th style="width: 15%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">${trans.date}</th>
+                                <th style="width: 50%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">${trans.concept}</th>
+                                <th style="width: 15%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">${trans.status}</th>
+                                <th style="width: 20%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:right;">${trans.amount}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1266,14 +1411,14 @@ function downloadPfReport() {
                         </tbody>
                     </table>
                     
-                    <div class="print-section-title" style="font-size: 11pt; font-weight: 600; margin-top: 10px; margin-bottom: 8px; color: #333333;">Gastos Variables / Imprevistos</div>
+                    <div class="print-section-title" style="font-size: 11pt; font-weight: 600; margin-top: 10px; margin-bottom: 8px; color: #333333;">${trans.variableExpenses}</div>
                     <table class="print-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
                         <thead>
                             <tr style="background-color: #f8f9fa;">
-                                <th style="width: 15%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">Fecha</th>
-                                <th style="width: 50%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">Concepto</th>
-                                <th style="width: 15%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">Estado</th>
-                                <th style="width: 20%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:right;">Monto</th>
+                                <th style="width: 15%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">${trans.date}</th>
+                                <th style="width: 50%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">${trans.concept}</th>
+                                <th style="width: 15%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600;">${trans.status}</th>
+                                <th style="width: 20%; padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:right;">${trans.amount}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1287,14 +1432,14 @@ function downloadPfReport() {
         const fixedRows = makeTableRows(fixedExpenses);
         const variableRows = makeTableRows(variableExpenses);
         contentHTML = `
-            <div class="print-section-title" style="font-size:13pt; font-weight:600; margin-top:25px; margin-bottom:10px; border-bottom:1px solid #dddddd; padding-bottom:5px;">Gastos Fijos</div>
+            <div class="print-section-title" style="font-size:13pt; font-weight:600; margin-top:25px; margin-bottom:10px; border-bottom:1px solid #dddddd; padding-bottom:5px;">${trans.fixedExpenses}</div>
             <table class="print-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                 <thead>
                     <tr style="background-color: #f0f0f0;">
-                        <th style="width: 15%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">Fecha</th>
-                        <th style="width: 50%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">Concepto</th>
-                        <th style="width: 15%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">Estado</th>
-                        <th style="width: 20%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600; text-align:right;">Monto</th>
+                        <th style="width: 15%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">${trans.date}</th>
+                        <th style="width: 50%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">${trans.concept}</th>
+                        <th style="width: 15%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">${trans.status}</th>
+                        <th style="width: 20%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600; text-align:right;">${trans.amount}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1302,14 +1447,14 @@ function downloadPfReport() {
                 </tbody>
             </table>
             
-            <div class="print-section-title" style="font-size:13pt; font-weight:600; margin-top:25px; margin-bottom:10px; border-bottom:1px solid #dddddd; padding-bottom:5px;">Gastos Variables / Imprevistos</div>
+            <div class="print-section-title" style="font-size:13pt; font-weight:600; margin-top:25px; margin-bottom:10px; border-bottom:1px solid #dddddd; padding-bottom:5px;">${trans.variableExpenses}</div>
             <table class="print-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                 <thead>
                     <tr style="background-color: #f0f0f0;">
-                        <th style="width: 15%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">Fecha</th>
-                        <th style="width: 50%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">Concepto</th>
-                        <th style="width: 15%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">Estado</th>
-                        <th style="width: 20%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600; text-align:right;">Monto</th>
+                        <th style="width: 15%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">${trans.date}</th>
+                        <th style="width: 50%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">${trans.concept}</th>
+                        <th style="width: 15%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600;">${trans.status}</th>
+                        <th style="width: 20%; padding: 8px 10px; border-bottom: 1px solid #dddddd; font-size: 9pt; font-weight: 600; text-align:right;">${trans.amount}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1319,18 +1464,16 @@ function downloadPfReport() {
         `;
     }
     
-    const reportTitle = "Reporte de Finanzas Personales";
-    
     // Detectar si es dispositivo móvil
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
                      || (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
                      
     const reportHTML = `<!DOCTYPE html>
-<html lang="es">
+<html lang="${currentLang}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${reportTitle}</title>
+    <title>${trans.reportTitle}</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1445,30 +1588,30 @@ function downloadPfReport() {
 <body>
     <div class="print-report-header">
         <div>
-            <h1>Reporte de Finanzas Personales</h1>
-            <p>Control de gastos y presupuesto personal</p>
+            <h1>${trans.reportTitle}</h1>
+            <p>${trans.subtitle}</p>
         </div>
         <div class="print-report-header-right">
-            <div class="print-date">${isAllMonths ? periodText : `Período: ${periodText}`}</div>
-            <div class="print-subtitle">Generado: ${dateToday}</div>
+            <div class="print-date">${isAllMonths ? periodText : `${trans.period}: ${periodText}`}</div>
+            <div class="print-subtitle">${trans.generated}: ${dateToday}</div>
         </div>
     </div>
     
     <div class="print-summary-grid">
         <div class="print-summary-card print-card-income">
-            <h3>Ingreso / Presupuesto</h3>
+            <h3>${trans.budget}</h3>
             <div class="amount">RD$ ${currentIncome.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
         </div>
         <div class="print-summary-card print-card-expense">
-            <h3>Total Pagado</h3>
+            <h3>${trans.totalPaid}</h3>
             <div class="amount">RD$ ${totalPaid.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
         </div>
         <div class="print-summary-card print-card-pending">
-            <h3>Total Pendiente</h3>
+            <h3>${trans.totalPending}</h3>
             <div class="amount">RD$ ${totalPending.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
         </div>
         <div class="print-summary-card print-card-balance">
-            <h3>Saldo Disponible</h3>
+            <h3>${trans.availableBalance}</h3>
             <div class="amount">RD$ ${balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
         </div>
     </div>
@@ -1476,7 +1619,7 @@ function downloadPfReport() {
     ${contentHTML}
     
     <div class="print-report-footer">
-        Reporte de Finanzas Personales - Generado localmente y de forma privada por Income Manage.
+        ${trans.footer}
     </div>
     
     <script>
@@ -1504,30 +1647,30 @@ function downloadPfReport() {
                 <div class="print-report-wrapper">
                     <div class="print-report-header">
                         <div>
-                            <h1>Reporte de Finanzas Personales</h1>
-                            <p>Control de gastos y presupuesto personal</p>
+                            <h1>${trans.reportTitle}</h1>
+                            <p>${trans.subtitle}</p>
                         </div>
                         <div class="print-report-header-right">
-                            <div class="print-date">${isAllMonths ? periodText : `Período: ${periodText}`}</div>
-                            <div class="print-subtitle">Generado: ${dateToday}</div>
+                            <div class="print-date">${isAllMonths ? periodText : `${trans.period}: ${periodText}`}</div>
+                            <div class="print-subtitle">${trans.generated}: ${dateToday}</div>
                         </div>
                     </div>
                     
                     <div class="print-summary-grid" style="display: flex; justify-content: space-between; gap: 15px; margin-bottom: 30px;">
                         <div class="print-summary-card print-card-income" style="flex:1; border: 1px solid #dddddd; padding: 12px; border-radius: 6px; background-color: #fafafa;">
-                            <h3 style="font-size: 9pt; color: #555555; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Ingreso / Presupuesto</h3>
+                            <h3 style="font-size: 9pt; color: #555555; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">${trans.budget}</h3>
                             <div class="amount" style="font-size: 13pt; font-weight: 700; color: #0052cc;">RD$ ${currentIncome.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
                         </div>
                         <div class="print-summary-card print-card-expense" style="flex:1; border: 1px solid #dddddd; padding: 12px; border-radius: 6px; background-color: #fafafa;">
-                            <h3 style="font-size: 9pt; color: #555555; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Total Pagado</h3>
+                            <h3 style="font-size: 9pt; color: #555555; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">${trans.totalPaid}</h3>
                             <div class="amount" style="font-size: 13pt; font-weight: 700; color: #de350b;">RD$ ${totalPaid.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
                         </div>
                         <div class="print-summary-card print-card-pending" style="flex:1; border: 1px solid #dddddd; padding: 12px; border-radius: 6px; background-color: #fafafa;">
-                            <h3 style="font-size: 9pt; color: #555555; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Total Pendiente</h3>
+                            <h3 style="font-size: 9pt; color: #555555; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">${trans.totalPending}</h3>
                             <div class="amount" style="font-size: 13pt; font-weight: 700; color: #f59e0b;">RD$ ${totalPending.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
                         </div>
                         <div class="print-summary-card print-card-balance" style="flex:1; border: 1px solid #dddddd; padding: 12px; border-radius: 6px; background-color: #fafafa;">
-                            <h3 style="font-size: 9pt; color: #555555; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">Saldo Disponible</h3>
+                            <h3 style="font-size: 9pt; color: #555555; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">${trans.availableBalance}</h3>
                             <div class="amount" style="font-size: 13pt; font-weight: 700; color: #00875a;">RD$ ${balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</div>
                         </div>
                     </div>
@@ -1535,7 +1678,7 @@ function downloadPfReport() {
                     ${contentHTML}
                     
                     <div class="print-report-footer" style="border-top:1px dashed #cccccc; padding-top:15px; text-align:center; font-size:8pt; color:#777777; margin-top:30px;">
-                        Reporte de Finanzas Personales - Generado localmente y de forma privada por Income Manage.
+                        ${trans.footer}
                     </div>
                 </div>
             `;
@@ -2546,7 +2689,7 @@ function downloadMonthlyReport() {
     const selYear = parseInt(filterYear.value);
     
     // Obtener idioma actual del navegador / Google Translate
-    const currentLang = (document.documentElement.lang || 'es').split('-')[0].toLowerCase();
+    const currentLang = getCurrentLangFromCookie();
     
     const translations = {
         es: {
@@ -4056,8 +4199,454 @@ function renderTCharts() {
     }
 }
 
-// --- SELECTOR DE IDIOMA PERSONALIZADO (GOOGLE TRANSLATE - COOKIE + RELOAD) ---
+// --- COPILOT DE FINANZAS PERSONALES LOGIC ---
 
+let copilotMessages = [];
+
+// Clave API por defecto provista por el usuario para pruebas rápidas
+const DEFAULT_GEMINI_KEY = "";
+
+function initCopilot() {
+    const btnToggle = document.getElementById('btn-pf-copilot-toggle');
+    const btnClose = document.getElementById('btn-copilot-close');
+    const btnSettings = document.getElementById('btn-copilot-settings');
+    const btnSaveKey = document.getElementById('btn-copilot-save-key');
+    const inputKey = document.getElementById('copilot-api-key-input');
+    const formInput = document.getElementById('copilot-input-form');
+    const messageInput = document.getElementById('copilot-message-input');
+    
+    if (!btnToggle) return;
+    
+    // Inicializar clave API si no existe en localStorage
+    if (!localStorage.getItem('copilot_api_key')) {
+        localStorage.setItem('copilot_api_key', DEFAULT_GEMINI_KEY);
+    }
+    
+    // Configurar valor del input con la clave guardada
+    if (inputKey) {
+        inputKey.value = localStorage.getItem('copilot_api_key') || '';
+    }
+    
+    updateKeyStatusText();
+    
+    // Evento de abrir/cerrar chat
+    btnToggle.addEventListener('click', toggleCopilotChat);
+    
+    if (btnClose) {
+        btnClose.addEventListener('click', () => {
+            const container = document.getElementById('pf-copilot-container');
+            if (container) container.classList.remove('active');
+            
+            const chatIcon = document.querySelector('.btn-pf-copilot-toggle .chat-icon');
+            const closeIcon = document.querySelector('.btn-pf-copilot-toggle .close-icon');
+            if (chatIcon) chatIcon.classList.remove('hidden-element');
+            if (closeIcon) closeIcon.classList.add('hidden-element');
+        });
+    }
+    
+    if (btnSettings) {
+        btnSettings.addEventListener('click', () => {
+            const panel = document.getElementById('copilot-settings-panel');
+            if (panel) panel.classList.toggle('hidden-element');
+        });
+    }
+    
+    if (btnSaveKey) {
+        btnSaveKey.addEventListener('click', () => {
+            const keyVal = inputKey.value.trim();
+            if (keyVal) {
+                localStorage.setItem('copilot_api_key', keyVal);
+                showToast('Clave API guardada con éxito.', 'success');
+            } else {
+                localStorage.removeItem('copilot_api_key');
+                showToast('Clave API eliminada. Se usará el motor local.', 'info');
+            }
+            updateKeyStatusText();
+            const panel = document.getElementById('copilot-settings-panel');
+            if (panel) panel.classList.add('hidden-element');
+        });
+    }
+    
+    if (formInput) {
+        formInput.addEventListener('submit', handleCopilotSendMessage);
+    }
+    
+    // Primer mensaje de bienvenida
+    resetCopilotHistory();
+}
+
+function updateKeyStatusText() {
+    const statusText = document.getElementById('copilot-key-status');
+    if (!statusText) return;
+    const currentKey = localStorage.getItem('copilot_api_key');
+    if (currentKey) {
+        statusText.textContent = "✓ Clave API activa. Modo IA inteligente habilitado.";
+        statusText.style.color = "#10b981"; // verde
+    } else {
+        statusText.textContent = "⚠ Sin Clave API. Usando Modo Local básico.";
+        statusText.style.color = "#f59e0b"; // naranja
+    }
+}
+
+function toggleCopilotChat() {
+    const container = document.getElementById('pf-copilot-container');
+    if (!container) return;
+    
+    container.classList.toggle('active');
+    
+    const chatIcon = document.querySelector('.btn-pf-copilot-toggle .chat-icon');
+    const closeIcon = document.querySelector('.btn-pf-copilot-toggle .close-icon');
+    
+    if (container.classList.contains('active')) {
+        if (chatIcon) chatIcon.classList.add('hidden-element');
+        if (closeIcon) closeIcon.classList.remove('hidden-element');
+        
+        // Scroll al fondo al abrir
+        const messagesContainer = document.getElementById('copilot-messages-container');
+        if (messagesContainer) {
+            setTimeout(() => {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 100);
+        }
+    } else {
+        if (chatIcon) chatIcon.classList.remove('hidden-element');
+        if (closeIcon) closeIcon.classList.add('hidden-element');
+    }
+}
+
+function updateCopilotVisibility() {
+    const copilotContainer = document.getElementById('pf-copilot-container');
+    if (!copilotContainer) return;
+    
+    if (currentUser && currentModule === 'personales') {
+        copilotContainer.classList.remove('hidden-element');
+        document.body.classList.add('has-copilot');
+    } else {
+        copilotContainer.classList.add('hidden-element');
+        document.body.classList.remove('has-copilot');
+        // Asegurar que el chat esté cerrado
+        copilotContainer.classList.remove('active');
+        const chatIcon = document.querySelector('.btn-pf-copilot-toggle .chat-icon');
+        const closeIcon = document.querySelector('.btn-pf-copilot-toggle .close-icon');
+        if (chatIcon) chatIcon.classList.remove('hidden-element');
+        if (closeIcon) closeIcon.classList.add('hidden-element');
+    }
+    
+    // Sincronizar también la visibilidad del botón de scroll-to-top
+    updateScrollTopButtonVisibility();
+}
+
+function updateScrollTopButtonVisibility() {
+    const btnScrollTop = document.getElementById('btn-scroll-top');
+    if (!btnScrollTop) return;
+    
+    const isInsideModule = currentUser && (currentModule === 'tesoreria' || currentModule === 'personales');
+    if (isInsideModule && window.scrollY > 300) {
+        btnScrollTop.classList.add('visible');
+    } else {
+        btnScrollTop.classList.remove('visible');
+    }
+}
+
+function resetCopilotHistory() {
+    const container = document.getElementById('copilot-messages-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    copilotMessages = [];
+    
+    const greetingText = `¡Hola! Soy tu **Copilot de Finanzas Personales** 🤖.
+Puedo analizar tus ingresos y gastos registrados de este mes para darte consejos prácticos de ahorro y responder tus preguntas.
+
+**Prueba a preguntarme:**
+* *¿Cuál es mi saldo disponible?*
+* *¿Cuánto dinero puedo gastar en salidas en base a mi saldo?*
+* *¿Cuánto he gastado este mes y cuánto tengo pendiente?*`;
+    
+    appendCopilotMessage('assistant', greetingText);
+}
+
+function appendCopilotMessage(sender, text) {
+    const container = document.getElementById('copilot-messages-container');
+    if (!container) return;
+    
+    removeTypingBubble();
+    
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `copilot-message ${sender}`;
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'copilot-message-bubble';
+    
+    // Parseo básico de negritas **texto** a <strong>texto</strong> y saltos de línea
+    let formattedText = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+        
+    bubble.innerHTML = formattedText;
+    
+    const time = document.createElement('span');
+    time.className = 'copilot-message-time';
+    const now = new Date();
+    time.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    msgDiv.appendChild(bubble);
+    msgDiv.appendChild(time);
+    container.appendChild(msgDiv);
+    
+    // Mantener scroll abajo
+    container.scrollTop = container.scrollHeight;
+}
+
+function showTypingBubble() {
+    const container = document.getElementById('copilot-messages-container');
+    if (!container || document.getElementById('copilot-typing-bubble')) return;
+    
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'copilot-message assistant';
+    msgDiv.id = 'copilot-typing-bubble';
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'copilot-message-bubble typing-bubble';
+    
+    for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'typing-dot';
+        bubble.appendChild(dot);
+    }
+    
+    msgDiv.appendChild(bubble);
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+function removeTypingBubble() {
+    const bubble = document.getElementById('copilot-typing-bubble');
+    if (bubble) bubble.remove();
+}
+
+async function handleCopilotSendMessage(e) {
+    e.preventDefault();
+    
+    const messageInput = document.getElementById('copilot-message-input');
+    const sendBtn = document.getElementById('btn-pf-copilot-toggle');
+    const messageForm = document.getElementById('copilot-input-form');
+    
+    if (!messageInput) return;
+    
+    const text = messageInput.value.trim();
+    if (!text) return;
+    
+    // Mostrar mensaje del usuario
+    appendCopilotMessage('user', text);
+    messageInput.value = '';
+    messageInput.disabled = true;
+    
+    // Mostrar estado "escribiendo..."
+    showTypingBubble();
+    
+    // Obtener data financiera del periodo seleccionado
+    const isAllMonths = pfFilterMonth.value === 'all';
+    const selMonth = isAllMonths ? null : parseInt(pfFilterMonth.value);
+    const selYear = parseInt(pfFilterYear.value);
+    
+    // Filtrar gastos
+    const filteredExpenses = personalExpenses.filter(e => {
+        if (!e.fecha) return false;
+        const [year, month] = e.fecha.split('-').map(Number);
+        return year === selYear && (isAllMonths || (month - 1) === selMonth);
+    });
+    
+    // Calcular totales
+    let totalPaid = 0;
+    let totalPending = 0;
+    filteredExpenses.forEach(e => {
+        const amt = parseFloat(e.monto) || 0;
+        if (e.estado === 'pagado') {
+            totalPaid += amt;
+        } else {
+            totalPending += amt;
+        }
+    });
+    
+    let currentIncome = 0;
+    let periodName = "";
+    if (isAllMonths) {
+        periodName = `Todo el año ${selYear}`;
+        let annualSum = 0;
+        Object.keys(personalIncomes).forEach(key => {
+            if (key.startsWith(`${selYear}-`)) {
+                annualSum += parseFloat(personalIncomes[key]) || 0;
+            }
+        });
+        currentIncome = annualSum;
+    } else {
+        const monthsNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        periodName = `${monthsNames[selMonth]} ${selYear}`;
+        const monthStr = String(selMonth + 1).padStart(2, '0');
+        const periodKey = `${selYear}-${monthStr}`;
+        currentIncome = parseFloat(personalIncomes[periodKey]) || 0.00;
+    }
+    
+    const balance = currentIncome - totalPaid;
+    const totalSpent = totalPaid + totalPending;
+    
+    const apiKey = localStorage.getItem('copilot_api_key');
+    
+    // Intentar responder
+    try {
+        if (apiKey) {
+            // --- MODO INTELIGENTE CON GEMINI API ---
+            
+            // Mapear los gastos a una estructura compacta
+            const expensesListCompact = filteredExpenses.map(e => ({
+                concepto: e.concepto,
+                monto: e.monto,
+                tipo: e.tipo,
+                estado: e.estado,
+                fecha: e.fecha,
+                categoria: e.categoria || 'Sin categoría'
+            }));
+            
+            const systemPrompt = `Eres un asesor financiero personal experto e inteligente para el usuario.
+Tu tarea es responder preguntas personalizadas sobre su presupuesto, ingresos, gastos y saldo restante para el período seleccionado.
+A continuación se proporciona la información financiera en tiempo real extraída del sistema de su navegador:
+- Período seleccionado: ${periodName}
+- Ingreso/Presupuesto del mes: RD$ ${currentIncome.toFixed(2)}
+- Total Gastado (Ya Pagado): RD$ ${totalPaid.toFixed(2)}
+- Total Pendiente por Pagar: RD$ ${totalPending.toFixed(2)}
+- Saldo Disponible actual (Ingreso - Gastado Pagado): RD$ ${balance.toFixed(2)}
+- Balance Restante Neto Total (Ingreso - Total Gastos): ${(currentIncome - totalSpent).toFixed(2)}
+- Lista de Gastos registrados: ${JSON.stringify(expensesListCompact)}
+
+Reglas de comportamiento:
+1. Responde siempre en español, con un tono amable, profesional, conciso y motivador.
+2. Da respuestas breves y directas, de máximo 3 o 4 oraciones a menos que te soliciten un desglose.
+3. Utiliza el formato de moneda dominicana "RD$ X,XXX.XX" para los montos.
+4. Si el usuario te pregunta cosas del tipo "¿Cuánto dinero puedo gastar en salidas en base a mi saldo disponible?", analiza:
+   - Su saldo disponible actual.
+   - Si tiene gastos pendientes de pago importantes (que reduzcan su margen real).
+   - Recomienda un límite prudente para esa categoría (por ejemplo, destinar el 10-15% del saldo disponible para no comprometer el presupuesto) y justifica la respuesta con números.
+5. Nunca aludas a datos que no existan en el contexto proporcionado ni inventes transacciones.
+6. Si te preguntan sobre el módulo de Tesorería, aclara de forma atenta que estás diseñado exclusivamente para responder sobre el módulo de Finanzas Personales.`;
+
+            const reply = await callGeminiAPI(apiKey, systemPrompt, text);
+            appendCopilotMessage('assistant', reply);
+            
+        } else {
+            // --- MODO LOCAL BÁSICO (REGLAS Y REGEX) ---
+            
+            // Simular pequeña latencia para que se sienta interactivo
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            const lowerText = text.toLowerCase();
+            let reply = "";
+            
+            if (lowerText.includes('saldo') || lowerText.includes('disponible') || lowerText.includes('balance') || lowerText.includes('cuanto tengo')) {
+                reply = `Para el período **${periodName}**, tu presupuesto de ingresos es **${formatCurrency(currentIncome)}**.\n\n` + 
+                        `Tu saldo disponible actual es **${formatCurrency(balance)}** (Ingreso mensual menos gastos ya pagados).\n` +
+                        `Si consideras también los gastos pendientes (${formatCurrency(totalPending)}), tu balance restante neto al final del mes sería **${formatCurrency(currentIncome - totalSpent)}**.`;
+                        
+            } else if (lowerText.includes('gasto') || lowerText.includes('gastado') || lowerText.includes('gastos') || lowerText.includes('pagar')) {
+                reply = `Durante **${periodName}**, tienes registrados un total de **${formatCurrency(totalSpent)}** en gastos:\n` +
+                        `- **${formatCurrency(totalPaid)}** ya pagados (restados de tu saldo disponible).\n` +
+                        `- **${formatCurrency(totalPending)}** pendientes de pago.`;
+                        
+            } else if (lowerText.includes('salida') || lowerText.includes('salidas') || lowerText.includes('comida') || lowerText.includes('supermercado') || lowerText.includes('entretenimiento') || lowerText.includes('gastar')) {
+                // Recomendación de salidas basada en el saldo
+                const maxSalidasRecomendado = Math.max(0, balance * 0.15); // 15% del saldo disponible
+                
+                // Buscar si hay gastos previos en categorías de salidas o comida
+                const gastosCategoria = filteredExpenses.filter(e => {
+                    const cat = (e.categoria || '').toLowerCase();
+                    const con = e.concepto.toLowerCase();
+                    return cat.includes('salida') || cat.includes('comida') || cat.includes('supermercado') || cat.includes('entretenimiento') || con.includes('cine') || con.includes('cena') || con.includes('restaurante') || con.includes('salida');
+                });
+                
+                const totalCategoria = gastosCategoria.reduce((sum, e) => sum + (parseFloat(e.monto) || 0), 0);
+                
+                reply = `Tu saldo disponible es **${formatCurrency(balance)}**. Te sugiero destinar como máximo un **15%** de este saldo para gastos discrecionales (salidas, comida fuera, entretenimiento), lo cual equivale a **${formatCurrency(maxSalidasRecomendado)}**.\n\n` +
+                        `Actualmente tienes registrados **${formatCurrency(totalCategoria)}** en este tipo de conceptos este mes.\n\n` +
+                        `*Recomendación:* Si planeas salir, te sugiero un límite de **${formatCurrency(Math.max(0, maxSalidasRecomendado - totalCategoria))}** para no afectar el pago de tus gastos pendientes (${formatCurrency(totalPending)}).`;
+                        
+            } else if (lowerText.includes('ayuda') || lowerText.includes('hola') || lowerText.includes('buenos dias') || lowerText.includes('buenas tardes')) {
+                reply = `¡Hola! Estoy listo para ayudarte con tu presupuesto de **${periodName}**.\n\n` +
+                        `Puedes hacerme preguntas sencillas sobre tu **'saldo'**, tus **'gastos'**, o pedirme recomendaciones de **'salidas'**.\n\n` +
+                        `*Nota:* Para habilitar mi motor de Inteligencia Artificial avanzado (capaz de razonar lógicamente sobre cualquier duda), por favor haz clic en el engranaje ⚙️ de arriba e introduce tu clave API de Gemini.`;
+            } else {
+                reply = `Entiendo tu consulta sobre tus finanzas en **${periodName}**, pero no puedo darte una respuesta detallada con mi motor local.\n\n` +
+                        `**Por favor, configura tu API Key de Gemini** haciendo clic en el engranaje ⚙️ de la cabecera. Es gratuita y me permitirá usar inteligencia artificial avanzada para analizar detalladamente tu consulta y darte una recomendación experta.`;
+            }
+            
+            appendCopilotMessage('assistant', reply);
+        }
+    } catch (err) {
+        removeTypingBubble();
+        appendCopilotMessage('assistant', `⚠ Ocurrió un error al procesar tu consulta: *${err.message}*.\n\nPor favor, verifica tu conexión a Internet o revisa que tu clave API de Gemini configurada sea correcta.`);
+    } finally {
+        messageInput.disabled = false;
+        messageInput.focus();
+    }
+}
+
+async function callGeminiAPI(apiKey, prompt, userMessage) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            contents: [
+                {
+                    parts: [
+                        { text: prompt + "\n\nPregunta del usuario:\n" + userMessage }
+                    ]
+                }
+            ],
+            generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 1000
+            },
+            safetySettings: [
+                {
+                    category: "HARM_CATEGORY_HARASSMENT",
+                    threshold: "BLOCK_NONE"
+                },
+                {
+                    category: "HARM_CATEGORY_HATE_SPEECH",
+                    threshold: "BLOCK_NONE"
+                },
+                {
+                    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    threshold: "BLOCK_NONE"
+                },
+                {
+                    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    threshold: "BLOCK_NONE"
+                }
+            ]
+        })
+    });
+    
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        console.error('Error de API de Gemini:', errData);
+        throw new Error(errData.error?.message || `HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const parts = data.candidates?.[0]?.content?.parts;
+    if (!parts || parts.length === 0) {
+        throw new Error('No se recibió texto del modelo.');
+    }
+    
+    const responseText = parts.map(p => p.text).join('');
+    return responseText.trim();
+}
+
+// --- SELECTOR DE IDIOMA PERSONALIZADO (GOOGLE TRANSLATE - COOKIE + RELOAD) ---
 const LANG_NAMES = {
     es: 'Español', en: 'English', fr: 'Français',
     pt: 'Português', it: 'Italiano', de: 'Deutsch'
@@ -4069,7 +4658,7 @@ function getCurrentLangFromCookie() {
 }
 
 function changeGoogleTranslateLanguage(langCode) {
-    // Escribir cookies en path raíz y dominio local (el único método confiable)
+    // Escribir cookies en path raíz y dominio local
     document.cookie = `googtrans=/es/${langCode}; path=/;`;
     document.cookie = `googtrans=/es/${langCode}; path=/; domain=${window.location.hostname};`;
 
@@ -4133,19 +4722,3 @@ function initCustomLanguageSelector() {
         }
     });
 }
-
-function updateScrollTopButtonVisibility() {
-    const btnScrollTop = document.getElementById('btn-scroll-top');
-    if (!btnScrollTop) return;
-    
-    // El botón se habilita únicamente si el usuario está logueado, dentro de los módulos
-    // (tesoreria o personales), y ha scrolled down más de 300px
-    const isInsideModule = currentUser && (currentModule === 'tesoreria' || currentModule === 'personales');
-    if (isInsideModule && window.scrollY > 300) {
-        btnScrollTop.classList.add('visible');
-    } else {
-        btnScrollTop.classList.remove('visible');
-    }
-}
-
-
