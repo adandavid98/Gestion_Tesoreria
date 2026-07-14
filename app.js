@@ -252,6 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 2. Configurar manejadores de eventos
     setupEventListeners();
+    
+    // 3. Inicializar selector de idioma personalizado
+    initCustomLanguageSelector();
 });
 
 // --- ESCUCHAR ESTADO DE AUTENTICACIÓN ---
@@ -312,6 +315,9 @@ onAuthStateChanged(auth, async (user) => {
         menuSection.classList.add('hidden-element');
         personalFinancesContainer.classList.add('hidden-element');
         if (btnBackToMenu) btnBackToMenu.classList.add('hidden-element');
+        
+        // Sincronizar visibilidad del botón de subir al inicio al desautenticar
+        updateScrollTopButtonVisibility();
         
         render();
     }
@@ -627,6 +633,9 @@ function showModule(moduleName) {
         if (btnBackToMenu) btnBackToMenu.classList.remove('hidden-element');
         renderPersonalFinances();
     }
+    
+    // Sincronizar visibilidad del botón de subir al inicio al cambiar de vista
+    updateScrollTopButtonVisibility();
 }
 
 async function checkAndClonePfExpenses(selYear, selMonth) {
@@ -1913,6 +1922,18 @@ function setupEventListeners() {
     }
     if (btnMcClose) {
         btnMcClose.addEventListener('click', () => closeModal(modalManageCategories));
+    }
+    
+    // Botón de subir al inicio (Scroll-to-top)
+    window.addEventListener('scroll', updateScrollTopButtonVisibility);
+    const btnScrollTop = document.getElementById('btn-scroll-top');
+    if (btnScrollTop) {
+        btnScrollTop.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
     }
 }
 
@@ -4008,3 +4029,97 @@ function renderTCharts() {
         });
     }
 }
+
+// --- SELECTOR DE IDIOMA PERSONALIZADO (GOOGLE TRANSLATE - COOKIE + RELOAD) ---
+
+const LANG_NAMES = {
+    es: 'Español', en: 'English', fr: 'Français',
+    pt: 'Português', it: 'Italiano', de: 'Deutsch'
+};
+
+function getCurrentLangFromCookie() {
+    const match = document.cookie.match(/googtrans=\/es\/([a-z]+)/);
+    return (match && match[1] !== 'es') ? match[1] : 'es';
+}
+
+function changeGoogleTranslateLanguage(langCode) {
+    // Escribir cookies en path raíz y dominio local (el único método confiable)
+    document.cookie = `googtrans=/es/${langCode}; path=/;`;
+    document.cookie = `googtrans=/es/${langCode}; path=/; domain=${window.location.hostname};`;
+
+    // Mostrar un toast de aviso antes de recargar
+    const langName = LANG_NAMES[langCode] || langCode.toUpperCase();
+    showToast(`Aplicando idioma: ${langName}...`, 'info');
+
+    // Pequeño delay para que el toast sea visible, luego recargar
+    setTimeout(() => {
+        window.location.reload();
+    }, 600);
+}
+
+function syncLanguageSelectorUI() {
+    const currentLangText = document.getElementById('current-lang-code');
+    const options = document.querySelectorAll('.translate-option');
+    if (!currentLangText) return false;
+
+    const activeLang = getCurrentLangFromCookie();
+    currentLangText.textContent = activeLang.toUpperCase();
+
+    options.forEach(opt => {
+        if (opt.getAttribute('data-lang') === activeLang) {
+            opt.classList.add('active');
+        } else {
+            opt.classList.remove('active');
+        }
+    });
+    return true;
+}
+
+function initCustomLanguageSelector() {
+    const triggerBtn = document.getElementById('translate-trigger-btn');
+    const dropdown = document.getElementById('custom-translate-dropdown');
+    const options = document.querySelectorAll('.translate-option');
+
+    if (!triggerBtn || !dropdown) return;
+
+    // Sincronizar UI con el idioma activo (leído de la cookie)
+    syncLanguageSelectorUI();
+
+    triggerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('active');
+        triggerBtn.setAttribute('aria-expanded', dropdown.classList.contains('active'));
+    });
+
+    options.forEach(option => {
+        option.addEventListener('click', () => {
+            const lang = option.getAttribute('data-lang');
+            dropdown.classList.remove('active');
+            triggerBtn.setAttribute('aria-expanded', 'false');
+            changeGoogleTranslateLanguage(lang);
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('active');
+            triggerBtn.setAttribute('aria-expanded', 'false');
+        }
+    });
+}
+
+function updateScrollTopButtonVisibility() {
+    const btnScrollTop = document.getElementById('btn-scroll-top');
+    if (!btnScrollTop) return;
+    
+    // El botón se habilita únicamente si el usuario está logueado, dentro de los módulos
+    // (tesoreria o personales), y ha scrolled down más de 300px
+    const isInsideModule = currentUser && (currentModule === 'tesoreria' || currentModule === 'personales');
+    if (isInsideModule && window.scrollY > 300) {
+        btnScrollTop.classList.add('visible');
+    } else {
+        btnScrollTop.classList.remove('visible');
+    }
+}
+
+

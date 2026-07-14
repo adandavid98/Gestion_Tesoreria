@@ -51,16 +51,32 @@
             
             <div class="header-right-actions">
                 <!-- Selector de Idioma (Traducción) -->
-                <div class="translation-control">
-                    <div class="lang-icon">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="2" y1="12" x2="22" y2="12"/>
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                <div class="custom-translate-dropdown" id="custom-translate-dropdown">
+                    <button class="translate-trigger-btn" id="translate-trigger-btn" aria-label="Cambiar idioma" aria-haspopup="listbox" aria-expanded="false">
+                        <div class="lang-icon">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="2" y1="12" x2="22" y2="12"/>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                            </svg>
+                        </div>
+                        <span id="current-lang-code" class="current-lang-text">ES</span>
+                        <svg class="dropdown-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"/>
                         </svg>
-                    </div>
-                    <div id="google_translate_element" class="google-translate-wrapper"></div>
+                    </button>
+                    <ul class="translate-options-menu" id="translate-options-menu" role="listbox">
+                        <li data-lang="es" class="translate-option active" role="option">ES - Español</li>
+                        <li data-lang="en" class="translate-option" role="option">EN - English</li>
+                        <li data-lang="fr" class="translate-option" role="option">FR - Français</li>
+                        <li data-lang="pt" class="translate-option" role="option">PT - Português</li>
+                        <li data-lang="it" class="translate-option" role="option">IT - Italiano</li>
+                        <li data-lang="de" class="translate-option" role="option">DE - Deutsch</li>
+                    </ul>
                 </div>
+                <!-- Google Translate Oculto -->
+                <div id="google_translate_element" style="position: absolute; top: -9999px; left: -9999px; visibility: hidden; width: 1px; height: 1px; overflow: hidden;"></div>
+
                 
                 <!-- Perfil de usuario (oculto por defecto) -->
                 <div id="user-profile" class="user-profile hidden-element">
@@ -408,7 +424,7 @@
                         </svg>
                         Configurar Categorías
                     </button>
-                    <input type="file" id="pf-csv-file-input" accept=".csv" class="hidden-file-input" aria-hidden="true">
+                    <input type="file" id="pf-csv-file-input" accept=".csv, text/csv, application/vnd.ms-excel, text/plain" class="hidden-file-input" aria-hidden="true">
                     
                     <button id="btn-pf-clear-data" class="btn-danger-outline">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -630,7 +646,7 @@
                     </svg>
                     Configurar Categorías
                 </button>
-                <input type="file" id="csv-file-input" accept=".csv" class="hidden-file-input" aria-hidden="true">
+                <input type="file" id="csv-file-input" accept=".csv, text/csv, application/vnd.ms-excel, text/plain" class="hidden-file-input" aria-hidden="true">
                 
                 <button id="btn-clear-data" class="btn-danger-outline">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -820,8 +836,15 @@
             }, 'google_translate_element');
         }
     </script>
+    <!-- Botón de Subir al Inicio -->
+    <button id="btn-scroll-top" class="btn-scroll-top" aria-label="Subir al inicio" title="Subir al inicio">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"/>
+        </svg>
+    </button>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     <script type="module" src="app.js"></script>
 </body>
 </html>

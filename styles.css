@@ -252,36 +252,129 @@ html:not(.dark) .header-logo:hover {
     box-shadow: var(--shadow-sm);
 }
 
-/* --- GOOGLE TRANSLATE CUSTOM STYLE --- */
-.translation-control {
+/* --- CUSTOM TRANSLATE DROPDOWN --- */
+.custom-translate-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.translate-trigger-btn {
     display: flex;
     align-items: center;
     gap: 8px;
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
-    padding: 0 12px;
+    padding: 0 14px;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     height: 42px;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* Adaptación a la pantalla de login (fondo translúcido) */
+body.login-view .translate-trigger-btn {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.translate-trigger-btn:hover {
+    background-color: var(--border-color);
+    border-color: var(--text-muted);
+}
+
+body.login-view .translate-trigger-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Icono de idioma en verde esmeralda */
+.translate-trigger-btn .lang-icon {
+    display: flex;
+    align-items: center;
+    color: var(--income-color);
+}
+
+/* Texto del idioma seleccionado en verde esmeralda y negrita */
+.translate-trigger-btn .current-lang-text {
+    color: var(--income-color);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* En modo login, mantenemos la coherencia de contraste */
+body.login-view .translate-trigger-btn .lang-icon,
+body.login-view .translate-trigger-btn .current-lang-text {
+    color: #34d399; /* Verde esmeralda claro para fondo oscuro */
+}
+
+.translate-trigger-btn .dropdown-chevron {
+    color: var(--text-muted);
+    transition: transform 0.25s ease;
+    margin-left: 2px;
+}
+
+body.login-view .translate-trigger-btn .dropdown-chevron {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Rotación del chevron cuando el menú está abierto */
+.custom-translate-dropdown.active .dropdown-chevron {
+    transform: rotate(180deg);
+}
+
+/* Menú de opciones desplegable */
+.translate-options-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 1000;
+    min-width: 160px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    list-style: none;
+    padding: 6px 0;
+    margin: 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+}
+
+.custom-translate-dropdown.active .translate-options-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.translate-option {
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: pointer;
     transition: var(--transition);
 }
 
-.translation-control:focus-within {
-    border-color: var(--primary-color);
+.translate-option:hover {
+    background-color: var(--border-color);
+    color: var(--primary-color);
 }
 
-.translation-control .lang-icon {
-    display: flex;
-    align-items: center;
-    color: var(--text-muted);
+.translate-option.active {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    font-weight: 600;
 }
 
-.google-translate-wrapper {
-    display: flex;
-    align-items: center;
-}
-
-/* Ocultar el logo de Google, textos redundantes y prevenir el empuje del layout */
+/* Ocultar elementos nativos de Google Translate */
 body {
     top: 0 !important;
 }
@@ -301,33 +394,6 @@ body {
     padding: 0 !important;
 }
 
-.goog-te-combo {
-    background-color: transparent !important;
-    border: none !important;
-    color: var(--text-color) !important;
-    padding: 8px 0 !important;
-    font-family: var(--font-family) !important;
-    font-size: 0.875rem !important;
-    outline: none !important;
-    cursor: pointer !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-    width: auto !important;
-}
-
-/* Estilo para la pantalla de inicio de sesión (fondo translúcido oscuro) */
-body.login-view .translation-control {
-    background-color: rgba(255, 255, 255, 0.05) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-body.login-view .translation-control .lang-icon {
-    color: #ffffff !important;
-}
-
-body.login-view .goog-te-combo {
-    color: #ffffff !important;
-}
 
 .theme-toggle-btn:hover {
     background-color: var(--border-color);
@@ -1777,4 +1843,52 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
 
 .btn-cat-delete:hover {
     color: #ef4444;
+}
+
+/* --- BOTÓN DE SUBIR AL INICIO --- */
+.btn-scroll-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border: none;
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                background-color 0.25s ease,
+                visibility 0.3s;
+}
+
+.btn-scroll-top:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+}
+
+.btn-scroll-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Adaptación responsiva para móviles */
+@media (max-width: 768px) {
+    .btn-scroll-top {
+        bottom: 20px;
+        right: 20px;
+        width: 42px;
+        height: 42px;
+    }
 }
