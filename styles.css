@@ -1757,6 +1757,9 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
         align-items: stretch;
         gap: 12px;
     }
+    .pf-expense-form .form-group {
+        flex: none;
+    }
     .pf-expense-form .form-group-btn {
         margin-top: 10px;
     }
