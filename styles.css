@@ -1204,7 +1204,8 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     /* Ocultar interfaz web principal */
     .app-container,
     .modal-overlay,
-    .toast-container {
+    .toast-container,
+    .btn-scroll-top {
         display: none !important;
     }
     
