@@ -44,7 +44,10 @@
                     </svg>
                 </div>
                 <div class="logo-text">
-                    <h1>Income Manage</h1>
+                    <div class="logo-title-row">
+                        <h1>Income Manage</h1>
+                        <span id="module-indicator" class="module-indicator hidden-element"></span>
+                    </div>
                     <p>Gestión y control de ingresos, gastos y presupuestos</p>
                 </div>
             </div>
@@ -626,7 +629,7 @@
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                     </svg>
-                    <span id="label-report-btn">Generar reporte mensual</span>
+                    <span id="label-report-btn">Generar reporte</span>
                 </button>
                 <button id="btn-export-backup" class="btn-outline">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -843,7 +846,7 @@
         </svg>
     </button>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="chart.js"></script>
     <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     <script type="module" src="app.js"></script>
 </body>

@@ -1936,3 +1936,30 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
         text-overflow: ellipsis;
     }
 }
+
+/* --- INDICADOR DE MÓDULO ACTIVO EN CABECERA --- */
+.logo-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.module-indicator {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    border: 1px solid rgba(79, 70, 229, 0.15);
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-block;
+}
+
+html.dark .module-indicator {
+    background-color: rgba(129, 140, 248, 0.15);
+    color: #a5b4fc;
+    border-color: rgba(129, 140, 248, 0.25);
+}

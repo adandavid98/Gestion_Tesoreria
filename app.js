@@ -1,12 +1,22 @@
 import { firebaseConfig } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Habilitar persistencia offline en Firestore
+enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code == 'failed-precondition') {
+        console.warn('La persistencia offline de Firestore falló: Múltiples pestañas abiertas.');
+    } else if (err.code == 'unimplemented') {
+        console.warn('Este navegador o entorno móvil no soporta persistencia offline de Firestore.');
+    }
+});
+
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
     prompt: 'select_account'
@@ -302,6 +312,8 @@ onAuthStateChanged(auth, async (user) => {
         if (tBarChartInstance) { tBarChartInstance.destroy(); tBarChartInstance = null; }
         
         currentModule = 'menu';
+        const moduleIndicator = document.getElementById('module-indicator');
+        if (moduleIndicator) moduleIndicator.classList.add('hidden-element');
         
         // Agregar clase de vista de login en el body
         document.body.classList.add('login-view');
@@ -621,6 +633,20 @@ function showModule(moduleName) {
     menuSection.classList.add('hidden-element');
     dashboardContainer.classList.add('hidden-element');
     personalFinancesContainer.classList.add('hidden-element');
+    
+    // Actualizar indicador del módulo activo en la cabecera
+    const moduleIndicator = document.getElementById('module-indicator');
+    if (moduleIndicator) {
+        if (moduleName === 'tesoreria') {
+            moduleIndicator.textContent = 'Tesorería';
+            moduleIndicator.classList.remove('hidden-element');
+        } else if (moduleName === 'personales') {
+            moduleIndicator.textContent = 'Finanzas Personales';
+            moduleIndicator.classList.remove('hidden-element');
+        } else {
+            moduleIndicator.classList.add('hidden-element');
+        }
+    }
     
     if (moduleName === 'menu') {
         menuSection.classList.remove('hidden-element');
@@ -2156,7 +2182,7 @@ function render() {
     // Actualizar texto del botón de reporte
     const labelReportBtnEl = document.getElementById('label-report-btn');
     if (labelReportBtnEl) {
-        labelReportBtnEl.textContent = isAllMonths ? 'Generar reporte anual' : 'Generar reporte mensual';
+        labelReportBtnEl.textContent = 'Generar reporte';
     }
     
     // Modificar clases del saldo según su valor (opcional, siempre azul pero da feedback)
