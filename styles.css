@@ -1639,6 +1639,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 12px;
     margin-bottom: 16px;
+    gap: 12px;
 }
 
 .pf-badge {
@@ -1647,6 +1648,8 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .pf-badge-fixed {
@@ -1665,6 +1668,23 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     gap: 12px;
     flex: 1;
     overflow-y: auto;
+    max-height: 450px;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.pf-expense-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.pf-expense-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.pf-expense-list::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 10px;
 }
 
 /* Items de Gastos */
@@ -2416,6 +2436,38 @@ html.dark .module-indicator {
         padding: 6px 12px !important;
         margin-right: 0 !important;
         font-size: 0.8rem !important;
+    }
+
+    /* Responsividad de las tarjetas de gastos de Finanzas Personales (Diseño apilado robusto) */
+    .pf-expense-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        padding: 12px !important;
+    }
+    
+    .pf-item-left {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .pf-item-right {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        border-top: 1px solid var(--border-color) !important;
+        padding-top: 10px !important;
+        gap: 8px !important;
+    }
+
+    .pf-expense-list {
+        max-height: 350px !important;
     }
 }
 

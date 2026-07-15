@@ -2522,10 +2522,10 @@ function render() {
             const tdAcciones = document.createElement('td');
             tdAcciones.className = 'text-right';
             
-            // Bot¿n Editar
+            // Botón Editar
             const btnEdit = document.createElement('button');
             btnEdit.className = 'btn-edit';
-            btnEdit.setAttribute('aria-label', 'Editar transacci¿n');
+            btnEdit.setAttribute('aria-label', 'Editar transacción');
             btnEdit.innerHTML = `
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -2535,10 +2535,10 @@ function render() {
             btnEdit.addEventListener('click', () => startEditTransaction(t.id));
             tdAcciones.appendChild(btnEdit);
             
-            // Bot¿n Eliminar
+            // Botón Eliminar
             const btnDel = document.createElement('button');
             btnDel.className = 'btn-delete';
-            btnDel.setAttribute('aria-label', 'Eliminar transacci¿n');
+            btnDel.setAttribute('aria-label', 'Eliminar transacción');
             btnDel.innerHTML = `
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6"/>
@@ -2601,9 +2601,9 @@ function handleFormSubmit(e) {
             transactions[idx].monto = monto;
             
             saveTransactions();
-            showToast('Transacci¿n modificada con éxito.', 'success');
+            showToast('Transacción modificada con éxito.', 'success');
             
-            // Restablecer filtros del mes/aÑo modificado para verlo
+            // Restablecer filtros del mes/año modificado para verlo
             const [tYear, tMonth] = fecha.split('-').map(Number);
             filterMonth.value = tMonth - 1;
             filterYear.value = tYear;
@@ -2611,13 +2611,13 @@ function handleFormSubmit(e) {
             cancelEdit();
             render();
         } else {
-            showToast('No se encontr¿ la transacci¿n a editar.', 'error');
+            showToast('No se encontró la transacción a editar.', 'error');
             cancelEdit();
         }
         return;
     }
     
-    // Modo Creaci¿n (Nuevo registro)
+    // Modo Creación (Nuevo registro)
     const newTransaction = {
         id: 't-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
         fecha: fecha,
@@ -2628,17 +2628,17 @@ function handleFormSubmit(e) {
         createdAt: new Date().toISOString()
     };
     
-    // A¿adir al inicio o guardar
+    // Añadir al inicio o guardar
     transactions.push(newTransaction);
     
     // Guardar en localStorage
     saveTransactions();
     
-    // Actualizar filtro de aÑo si ingresaron un aÑo nuevo
+    // Actualizar filtro de año si ingresaron un año nuevo
     const inputYear = parseInt(fecha.split('-')[0]);
     populateYearFilter(inputYear);
     
-    // Ajustar filtros para que muestren la fecha de la transacci¿n agregada
+    // Ajustar filtros para que muestren la fecha de la transacción agregada
     const [tYear, tMonth] = fecha.split('-').map(Number);
     filterMonth.value = tMonth - 1;
     filterYear.value = tYear;
@@ -2653,7 +2653,7 @@ function handleFormSubmit(e) {
     const todayStr = getTodayString();
     inputDate.value = todayStr;
     
-    showToast('Transacci¿n registrada con éxito.', 'success');
+    showToast('Transacción registrada con éxito.', 'success');
     
     // Re-renderizar
     render();
@@ -2693,7 +2693,7 @@ function startEditTransaction(id) {
         behavior: 'smooth'
     });
     
-    showToast('Editando transacci¿n...', 'info');
+    showToast('Editando transacción...', 'info');
 }
 
 function cancelEdit() {
@@ -2721,7 +2721,7 @@ function cancelEdit() {
     `;
 }
 
-// --- ELIMINAR TRANSACCI¿N ---
+// --- ELIMINAR TRANSACCIÓN ---
 
 function requestDeleteTransaction(id) {
     const t = transactions.find(item => item.id === id);
@@ -2749,7 +2749,7 @@ function confirmDeleteTransaction() {
     
     if (transactions.length < initialCount) {
         saveTransactions();
-        showToast('Transacci¿n eliminada correctamente.', 'success');
+        showToast('Transacción eliminada correctamente.', 'success');
     }
     
     closeModal(modalDelete);
