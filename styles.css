@@ -1766,14 +1766,6 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
 .blue-text { color: #3b82f6; }
 
 @media (max-width: 900px) {
-    .pf-expense-form {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-    }
-    .pf-expense-form .form-group-btn {
-        margin-top: 10px;
-    }
     .pf-expenses-columns {
         grid-template-columns: 1fr;
         gap: 16px;
@@ -2192,6 +2184,11 @@ html.dark .copilot-messages-container {
 .copilot-input-form button {
     width: 40px;
     height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    max-width: 40px;
+    max-height: 40px;
+    flex-shrink: 0;
     border-radius: 50%;
     background-color: var(--primary-color);
     color: #ffffff;
@@ -2302,12 +2299,12 @@ html.dark .module-indicator {
     transform: translateY(0);
 }
 
-/* Ajuste del bot�n cuando el copilot est� visible en la p�gina */
+/* Ajuste del botn cuando el copilot est visible en la pgina */
 .has-copilot .btn-scroll-top {
     bottom: 105px;
 }
 
-/* Adaptaci�n responsiva para m�viles */
+/* Adaptación responsiva para móviles */
 @media (max-width: 768px) {
     .btn-scroll-top {
         bottom: 20px;
@@ -2317,5 +2314,93 @@ html.dark .module-indicator {
     }
     .has-copilot .btn-scroll-top {
         bottom: 90px;
+    }
+}
+
+@media (max-width: 600px) {
+    /* Header adaptativo de dos filas para móviles */
+    .main-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 12px 16px !important;
+        gap: 12px !important;
+    }
+    
+    .logo-title-row {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+    
+    .logo-text p {
+        display: none !important; /* Esconder descripción para liberar espacio */
+    }
+    
+    .logo-text h1 {
+        font-size: 1.05rem !important;
+    }
+    
+    .logo-icon {
+        padding: 8px !important;
+    }
+    
+    .header-logo {
+        gap: 6px !important;
+    }
+    
+    /* Fila de acciones (idioma, menú, perfil, tema) */
+    .header-right-actions {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        border-top: 1px solid var(--border-color) !important;
+        padding-top: 10px !important;
+        margin-top: 2px !important;
+        gap: 8px !important;
+    }
+    
+    /* Ocultar nombre en móviles. Mantener foto de perfil y botón de logout juntos */
+    #user-name {
+        display: none !important;
+    }
+    
+    .user-profile {
+        display: flex !important;
+        align-items: center !important;
+        padding: 4px 6px !important;
+        border: 1px solid var(--border-color) !important;
+        background-color: var(--bg-color) !important;
+        border-radius: var(--radius-md) !important;
+        gap: 6px !important;
+        cursor: default !important;
+    }
+    
+    #user-photo {
+        width: 28px !important;
+        height: 28px !important;
+        border: 2px solid var(--primary-color) !important;
+    }
+    
+    .btn-logout {
+        display: flex !important;
+        padding: 4px !important;
+    }
+    
+    .btn-back-to-menu {
+        padding: 6px 12px !important;
+        margin-right: 0 !important;
+        font-size: 0.8rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .translate-trigger-btn {
+        padding: 6px 8px !important;
+    }
+    .current-lang-text {
+        font-size: 0.8rem !important;
+    }
+    .theme-toggle-btn {
+        padding: 8px !important;
     }
 }
