@@ -1238,10 +1238,10 @@ function downloadPfReport() {
     const translations = {
         es: {
             noExpensesRegistered: 'No hay gastos personales registrados para generar el reporte.',
-            noExpensesPeriod: 'No hay gastos registrados en el períododo seleccionado.',
+            noExpensesPeriod: 'No hay gastos registrados en el período seleccionado.',
             reportTitle: 'Reporte de Finanzas Personales',
             subtitle: 'Control de gastos y presupuesto personal',
-            period: 'Períododo',
+            period: 'Período',
             generated: 'Generado',
             budget: 'Ingreso / Presupuesto',
             totalPaid: 'Total Pagado',
@@ -1255,7 +1255,7 @@ function downloadPfReport() {
             amount: 'Monto',
             paid: 'PAGADO',
             pending: 'PENDIENTE',
-            noRecords: 'No hay registros en esta secci¿n',
+            noRecords: 'No hay registros en esta sección',
             footer: 'Reporte de Finanzas Personales - Generado localmente y de forma privada por Income Manage.',
             months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
         },
@@ -1552,9 +1552,10 @@ function downloadPfReport() {
                      || (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
                      
     const reportHTML = `<!DOCTYPE html>
-<html lang="${currentLang}">
+<html lang="${currentLang}" class="notranslate">
 <head>
     <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${trans.reportTitle}</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1665,6 +1666,26 @@ function downloadPfReport() {
             font-size: 8pt;
             color: #777777;
             margin-top: 30px;
+        }
+        /* Ocultar widgets y elementos de traducción inyectados por el navegador */
+        .skiptranslate,
+        #google_translate_element,
+        .goog-te-banner-frame,
+        .goog-te-balloon-frame,
+        .goog-te-balloon,
+        .goog-tooltip,
+        .goog-tooltip-responsive,
+        #goog-gt-tt,
+        iframe,
+        iframe[class*="goog"],
+        div[class*="goog"],
+        [class*="translate-"],
+        .translation- {
+            display: none !important;
+            height: 0 !important;
+            width: 0 !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
         }
     </style>
 </head>
@@ -2059,15 +2080,33 @@ function setupEventListeners() {
         });
     }
     
-    // Cerrar sesiÓn
+    // Cerrar sesión
     if (btnLogout) {
         btnLogout.addEventListener('click', async () => {
             try {
                 await signOut(auth);
-                showToast('Sesi¿n cerrada correctamente.', 'info');
+                showToast('Sesión cerrada correctamente.', 'info');
             } catch (error) {
-                console.error("Error al cerrar sesiÓn: ", error);
-                showToast('Error al cerrar sesiÓn.', 'error');
+                console.error("Error al cerrar sesión: ", error);
+                showToast('Error al cerrar sesión.', 'error');
+            }
+        });
+    }
+    
+    if (userProfile) {
+        userProfile.addEventListener('click', async () => {
+            // Si estamos en pantalla pequeña (móvil) donde el botón logout está oculto,
+            // permitimos cerrar sesión al tocar la foto de perfil (previo diálogo de confirmación)
+            if (window.innerWidth <= 600) {
+                if (confirm('¿Deseas cerrar sesión?')) {
+                    try {
+                        await signOut(auth);
+                        showToast('Sesión cerrada correctamente.', 'info');
+                    } catch (error) {
+                        console.error("Error al cerrar sesión: ", error);
+                        showToast('Error al cerrar sesión.', 'error');
+                    }
+                }
             }
         });
     }
@@ -2785,16 +2824,16 @@ function downloadMonthlyReport() {
     
     const translations = {
         es: {
-            noTransactionsYear: 'No hay transacciones registradas para este aÑo.',
+            noTransactionsYear: 'No hay transacciones registradas para este año.',
             noTransactionsMonth: 'No hay transacciones registradas para este mes.',
             annualReport: 'Reporte Anual de Tesorería',
             monthlyReport: 'Reporte Mensual de Tesorería',
-            subtitle: 'Detalle de ingresos y gastos de la tesorer¿a de la iglesia',
-            period: 'Períododo',
+            subtitle: 'Detalle de ingresos y gastos de la tesorería de la iglesia',
+            period: 'Período',
             generated: 'Generado el',
             totalIncome: 'Total Ingresos',
             totalExpense: 'Total Gastos',
-            annualBalance: 'Saldo del A¿o',
+            annualBalance: 'Saldo del Año',
             monthlyBalance: 'Saldo del Mes',
             date: 'Fecha',
             concept: 'Concepto',
@@ -2804,7 +2843,7 @@ function downloadMonthlyReport() {
             income: 'Ingreso',
             expense: 'Gasto',
             footer: 'Reporte de Tesorería de la Iglesia oficial - Generado de forma local y privada.',
-            transactionsTitle: 'Transacciones del períododo',
+            transactionsTitle: 'Transacciones del período',
             months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
         },
         en: {
@@ -3177,6 +3216,26 @@ function downloadMonthlyReport() {
         @media print {
             body { padding: 0; }
         }
+        /* Ocultar widgets y elementos de traducción inyectados por el navegador */
+        .skiptranslate,
+        #google_translate_element,
+        .goog-te-banner-frame,
+        .goog-te-balloon-frame,
+        .goog-te-balloon,
+        .goog-tooltip,
+        .goog-tooltip-responsive,
+        #goog-gt-tt,
+        iframe,
+        iframe[class*="goog"],
+        div[class*="goog"],
+        [class*="translate-"],
+        .translation- {
+            display: none !important;
+            height: 0 !important;
+            width: 0 !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
     </style>
 </head>
 <body>
@@ -3226,7 +3285,7 @@ function downloadMonthlyReport() {
         if (reportWindow) {
             reportWindow.document.write(reportHTML);
             reportWindow.document.close();
-            showToast('Reporte generado. Se abri¿ en una nueva pesta¿a.', 'success');
+            showToast('Reporte generado. Se abrió en una nueva pestaña.', 'success');
         } else {
             // Fallback si el navegador bloquea pop-ups
             const blob = new Blob([reportHTML], { type: 'text/html' });
@@ -3236,7 +3295,7 @@ function downloadMonthlyReport() {
             link.target = '_blank';
             link.click();
             URL.revokeObjectURL(url);
-            showToast('Reporte generado. Si no se abri¿, permite las ventanas emergentes.', 'info');
+            showToast('Reporte generado. Si no se abrió, permite las ventanas emergentes.', 'info');
         }
         
     } else {
@@ -3283,7 +3342,7 @@ function downloadMonthlyReport() {
             printContainer.innerHTML = '';
         }, 100);
         
-        showToast('Di¿logo de impresiÓn (PDF) abierto.', 'success');
+        showToast('Diálogo de impresión (PDF) abierto.', 'success');
     }
 }
 

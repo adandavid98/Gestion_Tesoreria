@@ -384,27 +384,30 @@ html, body {
     max-width: 100vw !important;
 }
 
+/* Ocultar completamente widgets, tooltip, globo flotante e iconos de Google/Brave Translate */
 .skiptranslate,
+#google_translate_element,
 .goog-te-banner-frame,
 .goog-te-balloon-frame,
+.goog-te-balloon,
+.goog-te-spinner,
+.goog-te-spinner-animation,
+.goog-te-spinner-container,
+.goog-tooltip,
+.goog-tooltip-responsive,
 #goog-gt-tt,
-iframe.goog-te-banner-frame {
+iframe[class*="goog"],
+div[class*="goog"],
+[class^="goog-"],
+[class*=" goog-"],
+[id^="goog-"],
+[id*=" goog-"] {
     display: none !important;
     height: 0 !important;
     width: 0 !important;
     visibility: hidden !important;
-}
-
-.goog-logo-link,
-.goog-te-gadget span {
-    display: none !important;
-}
-
-.goog-te-gadget {
-    color: transparent !important;
-    font-size: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 .theme-toggle-btn:hover {
@@ -1213,13 +1216,31 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
         display: block !important;
     }
 
-    /* Ocultar interfaz web principal */
-    .app-container,
-    .modal-overlay,
-    .toast-container,
-    .pf-copilot-container,
-    .btn-scroll-top {
+    /* Ocultar interfaz web principal y todos los elementos inyectados/traductores directos del body */
+    body > :not(#print-report-container) {
         display: none !important;
+        height: 0 !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+    }
+    
+    /* Ocultar elementos inyectados adicionales */
+    .skiptranslate,
+    #google_translate_element,
+    .goog-te-banner-frame,
+    .goog-te-balloon-frame,
+    #goog-gt-tt,
+    .goog-tooltip,
+    .goog-tooltip-responsive,
+    iframe,
+    iframe[class*="goog"],
+    div[class*="goog"],
+    [class*="translate-"],
+    .translation- {
+        display: none !important;
+        height: 0 !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }
     
     /* Mostrar contenedor de reporte */
@@ -2359,12 +2380,17 @@ html.dark .module-indicator {
         gap: 8px !important;
     }
     
+    .translate-options-menu {
+        left: 0 !important;
+        right: auto !important;
+    }
+    
     /* Ocultar nombre en móviles. Mantener foto de perfil y botón de logout juntos */
     #user-name {
         display: none !important;
     }
     
-    .user-profile {
+    .user-profile:not(.hidden-element) {
         display: flex !important;
         align-items: center !important;
         padding: 4px 6px !important;
