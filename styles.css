@@ -1,4 +1,4 @@
-/* --- SISTEMA DE DISE�O & VARIABLES --- */
+/* --- SISTEMA DE DISEÑO & VARIABLES --- */
 :root {
     --font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     
@@ -276,7 +276,7 @@ html:not(.dark) .header-logo:hover {
     font-weight: 600;
 }
 
-/* Adaptaci�n a la pantalla de login (fondo transl�cido) */
+/* Adaptación a la pantalla de login (fondo translúcido) */
 body.login-view .translate-trigger-btn {
     background-color: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.1);
@@ -323,12 +323,12 @@ body.login-view .translate-trigger-btn .dropdown-chevron {
     color: rgba(255, 255, 255, 0.6);
 }
 
-/* Rotaci�n del chevron cuando el men� est� abierto */
+/* Rotación del chevron cuando el menú está abierto */
 .custom-translate-dropdown.active .dropdown-chevron {
     transform: rotate(180deg);
 }
 
-/* Men� de opciones desplegable */
+/* Menú de opciones desplegable */
 .translate-options-menu {
     position: absolute;
     top: calc(100% + 8px);
@@ -415,7 +415,7 @@ div[class*="goog"],
     transform: scale(1.05);
 }
 
-/* Ocultar iconos seg�n el tema */
+/* Ocultar iconos según el tema */
 .sun-icon {
     display: none;
 }
@@ -876,7 +876,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     margin-top: 2px;
 }
 
-/* Colores espec�ficos de tarjetas */
+/* Colores específicos de tarjetas */
 .card-income .card-icon { background-color: var(--income-bg); color: var(--income-color); }
 .card-expense .card-icon { background-color: var(--expense-bg); color: var(--expense-color); }
 .card-balance .card-icon { background-color: var(--balance-bg); color: var(--balance-color); }
@@ -945,7 +945,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     font-weight: 600;
 }
 
-/* Botones de acci�n de tabla */
+/* Botones de acción de tabla */
 .btn-edit,
 .btn-delete {
     background: none;
@@ -1119,7 +1119,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     gap: 12px;
 }
 
-/* Detalles de eliminaci�n */
+/* Detalles de eliminación */
 .transaction-detail-box {
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
@@ -1204,7 +1204,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     display: none;
 }
 
-/* --- ESTILOS DE IMPRESI�N --- */
+/* --- ESTILOS DE IMPRESIÓN --- */
 @media print {
     html, body {
         background-color: #ffffff !important;
@@ -1376,7 +1376,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     }
 }
 
-/* --- ESTILOS DEL MEN� PRINCIPAL --- */
+/* --- ESTILOS DEL MENÚ PRINCIPAL --- */
 .menu-section {
     display: flex;
     flex-direction: column;
@@ -1534,7 +1534,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     }
 }
 
-/* --- ESTILOS BOT�N VOLVER EN HEADER --- */
+/* --- ESTILOS BOTÓN VOLVER EN HEADER --- */
 .btn-back-to-menu {
     display: flex;
     align-items: center;
@@ -1558,7 +1558,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     color: var(--primary-color);
 }
 
-/* --- ESTILOS M�DULO FINANZAS PERSONALES --- */
+/* --- ESTILOS MÓDULO FINANZAS PERSONALES --- */
 .personal-finances-container {
     animation: fadeIn 0.4s ease-out;
     width: 100%;
@@ -1817,7 +1817,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     }
 }
 
-/* --- PANEL DE CATEGOR�AS PERSONALIZABLES --- */
+/* --- PANEL DE CATEGORÍAS PERSONALIZABLES --- */
 .color-circle {
     width: 28px;
     height: 28px;
@@ -1904,7 +1904,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     font-family: var(--font-family);
 }
 
-/* Bot�n flotante */
+/* Botón flotante */
 .btn-pf-copilot-toggle {
     width: 60px;
     height: 60px;
@@ -2047,7 +2047,7 @@ html.dark input[type="date"]::-webkit-calendar-picker-indicator {
     transform: scale(1.05);
 }
 
-/* Panel de Configuraci�n de API Key */
+/* Panel de Configuración de API Key */
 .copilot-settings-panel {
     background-color: var(--input-bg);
     border-bottom: 1px solid var(--border-color);
@@ -2255,7 +2255,7 @@ html.dark .copilot-messages-container {
     opacity: 0.6;
 }
 
-/* Ajustes responsivos para m�viles */
+/* Ajustes responsivos para móviles */
 @media (max-width: 480px) {
     .pf-copilot-chat-window {
         position: fixed;
@@ -2302,7 +2302,7 @@ html.dark .module-indicator {
     border-color: rgba(129, 140, 248, 0.25);
 }
 
-/* --- BOT�N DE SUBIR AL INICIO --- */
+/* --- BOTÓN DE SUBIR AL INICIO --- */
 .btn-scroll-top {
     position: fixed;
     bottom: 30px;
