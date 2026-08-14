@@ -1,7 +1,7 @@
 import { firebaseConfig } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
@@ -36,6 +36,168 @@ let currentModule = 'menu';
 let parsedPfExpensesToImport = [];
 let parsedPfIncomesToImport = {};
 let editingPfExpenseId = null;
+
+// --- ESTADO DE ESPACIOS Y PASSPHRASES ---
+let activeTreasurySpace = {
+    passphrase: '',
+    hash: '',
+    spaceName: 'Cuenta Personal',
+    isOwner: true,
+    permissions: { allowEdit: true, allowDelete: true },
+    isBlocked: false,
+    members: {},
+    logs: []
+};
+
+let activePersonalSpace = {
+    passphrase: '',
+    hash: '',
+    spaceName: 'Cuenta Personal',
+    isOwner: true,
+    permissions: { allowEdit: true, allowDelete: true },
+    isBlocked: false,
+    members: {},
+    logs: []
+};
+
+let userSavedWorkspaces = {
+    tesoreria: [],
+    personales: []
+};
+
+let treasuryUnsubscribe = null;
+let personalUnsubscribe = null;
+let currentPassphraseModalModule = 'tesoreria';
+let currentManagePassphraseModule = 'tesoreria';
+let currentLogsModalModule = 'tesoreria';
+
+// Generador de Hash para Passphrases
+async function hashPassphrase(moduleName, passphrase) {
+    if (!passphrase || !passphrase.trim()) return '';
+    const cleanStr = moduleName.toLowerCase().trim() + '_' + passphrase.toLowerCase().trim();
+    const msgUint8 = new TextEncoder().encode(cleanStr);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Registrar Eventos en el Log de Auditoría
+async function addAuditLog(moduleName, action, details) {
+    const timestamp = new Date().toLocaleString();
+    const userEmail = currentUser ? currentUser.email : 'Usuario Local';
+    const logItem = {
+        id: Date.now().toString(),
+        timestamp,
+        userEmail,
+        action,
+        details
+    };
+
+    if (moduleName === 'tesoreria') {
+        activeTreasurySpace.logs = activeTreasurySpace.logs || [];
+        activeTreasurySpace.logs.unshift(logItem);
+        if (activeTreasurySpace.logs.length > 100) {
+            activeTreasurySpace.logs = activeTreasurySpace.logs.slice(0, 100);
+        }
+        await saveTransactions();
+    } else {
+        activePersonalSpace.logs = activePersonalSpace.logs || [];
+        activePersonalSpace.logs.unshift(logItem);
+        if (activePersonalSpace.logs.length > 100) {
+            activePersonalSpace.logs = activePersonalSpace.logs.slice(0, 100);
+        }
+        await savePersonalFinances();
+    }
+}
+
+// Actualizar Insignia del Espacio Activo
+function updateSpaceBadgeUI(moduleName) {
+    if (moduleName === 'tesoreria') {
+        const badge = document.getElementById('t-space-badge');
+        const nameEl = document.getElementById('t-space-name');
+        if (badge && nameEl) {
+            if (activeTreasurySpace.hash) {
+                badge.className = 'space-badge space-shared';
+                badge.querySelector('.space-icon').textContent = '👥';
+                const readOnlyLabel = activeTreasurySpace.permissions.isReadOnly ? ' (👁️ Solo Ver)' : '';
+                nameEl.textContent = (activeTreasurySpace.spaceName || 'Espacio Compartido') + readOnlyLabel;
+            } else {
+                badge.className = 'space-badge';
+                badge.querySelector('.space-icon').textContent = '🟢';
+                nameEl.textContent = activeTreasurySpace.spaceName || 'Cuenta Personal (Google)';
+            }
+        }
+    } else {
+        const badge = document.getElementById('pf-space-badge');
+        const nameEl = document.getElementById('pf-space-name');
+        if (badge && nameEl) {
+            if (activePersonalSpace.hash) {
+                badge.className = 'space-badge space-shared';
+                badge.querySelector('.space-icon').textContent = '👥';
+                const readOnlyLabel = activePersonalSpace.permissions.isReadOnly ? ' (👁️ Solo Ver)' : '';
+                nameEl.textContent = (activePersonalSpace.spaceName || 'Espacio Compartido') + readOnlyLabel;
+            } else {
+                badge.className = 'space-badge';
+                badge.querySelector('.space-icon').textContent = '🟢';
+                nameEl.textContent = activePersonalSpace.spaceName || 'Cuenta Personal (Google)';
+            }
+        }
+    }
+}
+
+// Actualizar Visibilidad de Botones por Permisos
+function updateModulePermissionUI(moduleName) {
+    if (moduleName === 'tesoreria') {
+        const btnConfig = document.getElementById('btn-config-passphrase');
+        const btnImport = document.getElementById('btn-import-trigger');
+        const btnClear = document.getElementById('btn-clear-data');
+        const submitBtn = document.querySelector('#transaction-form button[type="submit"]');
+        const isOwner = activeTreasurySpace.isOwner || !activeTreasurySpace.hash;
+        const allowAdd = activeTreasurySpace.permissions.allowAdd !== false && !activeTreasurySpace.permissions.isReadOnly;
+
+        if (btnConfig) btnConfig.style.display = isOwner ? 'inline-flex' : 'none';
+        if (btnImport) btnImport.style.display = isOwner ? 'inline-flex' : 'none';
+        if (btnClear) btnClear.style.display = isOwner ? 'inline-flex' : 'none';
+
+        if (submitBtn) {
+            submitBtn.disabled = !allowAdd;
+            submitBtn.title = allowAdd ? '' : 'Modo Solo Lectura: No tienes permiso para agregar transacciones';
+            submitBtn.style.opacity = allowAdd ? '1' : '0.5';
+            submitBtn.style.cursor = allowAdd ? 'pointer' : 'not-allowed';
+        }
+    } else {
+        const btnConfig = document.getElementById('btn-pf-config-passphrase');
+        const btnImport = document.getElementById('btn-pf-import-trigger');
+        const btnClear = document.getElementById('btn-pf-clear-data');
+        const submitBtn = document.querySelector('#pf-expense-form button[type="submit"]');
+        const isOwner = activePersonalSpace.isOwner || !activePersonalSpace.hash;
+        const allowAdd = activePersonalSpace.permissions.allowAdd !== false && !activePersonalSpace.permissions.isReadOnly;
+
+        if (btnConfig) btnConfig.style.display = isOwner ? 'inline-flex' : 'none';
+        if (btnImport) btnImport.style.display = isOwner ? 'inline-flex' : 'none';
+        if (btnClear) btnClear.style.display = isOwner ? 'inline-flex' : 'none';
+
+        if (submitBtn) {
+            submitBtn.disabled = !allowAdd;
+            submitBtn.title = allowAdd ? '' : 'Modo Solo Lectura: No tienes permiso para registrar gastos';
+            submitBtn.style.opacity = allowAdd ? '1' : '0.5';
+            submitBtn.style.cursor = allowAdd ? 'pointer' : 'not-allowed';
+        }
+    }
+}
+
+// Guardar Espacios Guardados en el Perfil de Google
+async function saveSavedWorkspacesToUser() {
+    if (!currentUser || !db) return;
+    try {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        await setDoc(userDocRef, {
+            savedWorkspaces: userSavedWorkspaces
+        }, { merge: true });
+    } catch (e) {
+        console.error('Error guardando espacios en perfil de usuario', e);
+    }
+}
 
 const DEFAULT_TREASURY_CATEGORIES = [
     { name: "Ofrenda", color: "#10b981" },
@@ -284,22 +446,35 @@ onAuthStateChanged(auth, async (user) => {
         if (userProfile) userProfile.classList.remove('hidden-element');
         
         // Ocultar login
-        loginSection.classList.add('hidden-element');
+        if (loginSection) loginSection.classList.add('hidden-element');
         
-        // Cargar transacciones de Tesorería
-        await loadTransactions();
+        // Cargar datos defensivamente
+        try {
+            await loadTransactions();
+        } catch (e) {
+            console.error("Error al cargar Tesorería:", e);
+        }
         
-        // Cargar Finanzas Personales
-        await loadPersonalFinances();
+        try {
+            await loadPersonalFinances();
+        } catch (e) {
+            console.error("Error al cargar Finanzas Personales:", e);
+        }
         
-        // Configurar filtros basándose en las transacciones cargadas
-        initFilters();
+        try {
+            initFilters();
+        } catch (e) {
+            console.error("Error al inicializar filtros:", e);
+        }
         
         // Mostrar módulo activo (por defecto: 'menu')
         showModule(currentModule);
         
-        // Renderizar interfaz
-        render();
+        try {
+            render();
+        } catch (e) {
+            console.error("Error al renderizar:", e);
+        }
     } else {
         currentUser = null;
         transactions = [];
@@ -417,70 +592,354 @@ async function migrateDataEncoding() {
     }
 }
 
+// --- FUNCIONES DE MODALES Y GESTIÓN DE ESPACIOS ---
+
+let currentPassphraseIsSwitching = false;
+
+function openPassphraseModal(moduleName, isSwitchingSpace = false) {
+    currentPassphraseModalModule = moduleName;
+    currentPassphraseIsSwitching = isSwitchingSpace;
+
+    const modal = document.getElementById('modal-module-passphrase');
+    const title = document.getElementById('passphrase-modal-title');
+    const inputPass = document.getElementById('passphrase-input');
+    const blockedAlert = document.getElementById('passphrase-blocked-alert');
+    const btnSkip = document.getElementById('btn-passphrase-skip');
+
+    if (title) title.textContent = moduleName === 'tesoreria' ? 'Acceso a Tesorería' : 'Acceso a Finanzas Personales';
+    if (inputPass) inputPass.value = '';
+    if (blockedAlert) blockedAlert.classList.add('hidden-element');
+
+    if (btnSkip) {
+        if (isSwitchingSpace) {
+            btnSkip.innerHTML = 'Cerrar';
+        } else {
+            btnSkip.innerHTML = '🟢 Continuar a mi Cuenta Personal (Sin Passphrase)';
+        }
+    }
+
+    renderSavedWorkspacesList();
+    openModal(modal);
+}
+
+function closePassphraseModal() {
+    const modal = document.getElementById('modal-module-passphrase');
+    if (modal) closeModal(modal);
+}
+
+function renderSavedWorkspacesList() {
+    const listContainer = document.getElementById('saved-workspaces-list');
+    if (!listContainer) return;
+
+    const workspaces = userSavedWorkspaces[currentPassphraseModalModule] || [];
+    const activeSpace = currentPassphraseModalModule === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+
+    if (workspaces.length === 0) {
+        listContainer.innerHTML = '';
+        return;
+    }
+
+    let html = '<h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">Tus Espacios Compartidos Guardados:</h4>';
+    workspaces.forEach(ws => {
+        const isActive = activeSpace.hash === ws.hash;
+        const safeName = ws.name ? ws.name.replace(/'/g, "\\'") : 'Espacio Compartido';
+        const safePass = ws.passphrase ? ws.passphrase.replace(/'/g, "\\'") : '';
+        html += `
+            <div class="workspace-option-card ${isActive ? 'active' : ''}" onclick="selectSavedWorkspace('${currentPassphraseModalModule}', '${ws.hash}', '${safeName}', '${safePass}')">
+                <div class="workspace-info">
+                    <h4>👥 ${ws.name || 'Espacio Compartido'}</h4>
+                    <p>Passphrase: ****${ws.passphrase ? ws.passphrase.slice(-3) : ''}</p>
+                </div>
+                ${isActive ? '<span style="color:#10b981; font-weight:700;">✓ Activo</span>' : '<span style="font-size:0.8rem; color:var(--primary-color);">Conectar →</span>'}
+            </div>
+        `;
+    });
+    listContainer.innerHTML = html;
+}
+
+window.selectSavedWorkspace = async function(moduleName, hash, name, passphrase) {
+    if (moduleName === 'tesoreria') {
+        activeTreasurySpace = {
+            passphrase,
+            hash,
+            spaceName: name || 'Espacio Compartido',
+            isOwner: false,
+            permissions: { allowEdit: false, allowDelete: false },
+            isBlocked: false,
+            members: {},
+            logs: []
+        };
+        await setupSpaceListener('tesoreria');
+    } else {
+        activePersonalSpace = {
+            passphrase,
+            hash,
+            spaceName: name || 'Espacio Compartido',
+            isOwner: false,
+            permissions: { allowEdit: false, allowDelete: false },
+            isBlocked: false,
+            members: {},
+            logs: []
+        };
+        await setupSpaceListener('personales');
+    }
+    closePassphraseModal();
+    showModule(moduleName);
+};
+
+let currentMmpMode = 'edit';
+
+function setMmpMode(mode) {
+    currentMmpMode = mode;
+    const tabEdit = document.getElementById('mmp-tab-edit');
+    const tabCreate = document.getElementById('mmp-tab-create');
+    const sectionTitle = document.getElementById('mmp-section-title');
+    const sectionDesc = document.getElementById('mmp-section-desc');
+    const copyContainer = document.getElementById('mmp-copy-local-container');
+    const submitBtn = document.getElementById('mmp-space-submit-btn');
+    const inputName = document.getElementById('mmp-space-name-input');
+    const inputPass = document.getElementById('mmp-passphrase-input');
+    const activeSpace = currentManagePassphraseModule === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+
+    if (mode === 'edit') {
+        if (tabEdit) {
+            tabEdit.style.background = 'var(--primary-color)';
+            tabEdit.style.color = 'white';
+        }
+        if (tabCreate) {
+            tabCreate.style.background = 'transparent';
+            tabCreate.style.color = 'var(--text-muted)';
+        }
+        if (sectionTitle) sectionTitle.textContent = 'Configurar Nombre y Passphrase';
+        if (sectionDesc) sectionDesc.textContent = 'Modifica los datos de este espacio activo. Al cambiar el nombre o clave se actualizarán para todos.';
+        if (copyContainer) copyContainer.style.display = 'none';
+        if (submitBtn) submitBtn.textContent = '💾 Guardar Cambios en mi Espacio Activo';
+
+        const defaultName = activeSpace.hash ? 'Espacio Compartido' : 'Cuenta Personal (Google)';
+        if (inputName) inputName.value = activeSpace.spaceName || defaultName;
+        if (inputPass) inputPass.value = activeSpace.passphrase || '';
+    } else {
+        if (tabCreate) {
+            tabCreate.style.background = 'var(--primary-color)';
+            tabCreate.style.color = 'white';
+        }
+        if (tabEdit) {
+            tabEdit.style.background = 'transparent';
+            tabEdit.style.color = 'var(--text-muted)';
+        }
+        if (sectionTitle) sectionTitle.textContent = 'Crear un Nuevo Espacio Compartido';
+        if (sectionDesc) sectionDesc.textContent = 'Asigna un nombre y frase de acceso a un espacio nuevo. Puedes iniciar en blanco o copiar tus datos actuales.';
+        if (copyContainer) copyContainer.style.display = 'flex';
+        if (submitBtn) submitBtn.textContent = '🚀 Crear y Conectarme a este Nuevo Espacio';
+
+        if (inputName) inputName.value = '';
+        if (inputPass) inputPass.value = '';
+    }
+}
+
+function openManagePassphraseModal(moduleName) {
+    currentManagePassphraseModule = moduleName;
+    const modal = document.getElementById('modal-manage-passphrase');
+    const title = document.getElementById('mmp-modal-title');
+    const transferSection = document.getElementById('mmp-transfer-section');
+    const badgeEl = document.getElementById('mmp-current-space-badge');
+    const descEl = document.getElementById('mmp-current-space-desc');
+    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+
+    const moduleTitle = moduleName === 'tesoreria' ? 'Tesorería' : 'Finanzas Personales';
+    if (title) title.textContent = `⚙ Configurar Espacio: ${moduleTitle}`;
+
+    setMmpMode('edit');
+
+    // Actualizar banner de espacio activo
+    if (badgeEl && descEl) {
+        if (!activeSpace.hash) {
+            badgeEl.textContent = `🟢 ${activeSpace.spaceName || 'Cuenta Personal (Google)'} (Espacio Local)`;
+            descEl.innerHTML = `📍 <strong>Acción:</strong> Estás modificando tu espacio actual. Si agregas una Passphrase abajo, tus datos actuales se protegerán y podrás compartirlos con otros.`;
+        } else {
+            badgeEl.textContent = `👥 ${activeSpace.spaceName || 'Espacio Compartido'} (Espacio Conectado)`;
+            descEl.innerHTML = `📍 <strong>Acción:</strong> Estás modificando este espacio compartido activo. Los cambios se guardarán directamente en este espacio.`;
+        }
+    }
+
+    // La transferencia de propiedad es exclusiva del Módulo de Tesorería para el Tesorero Principal
+    if (transferSection) {
+        const isOwner = activeSpace.isOwner || !activeSpace.hash;
+        transferSection.style.display = (moduleName === 'tesoreria' && isOwner) ? 'block' : 'none';
+    }
+
+    renderMembersTable(moduleName);
+    openModal(modal);
+}
+
+function renderMembersTable(moduleName) {
+    const tbody = document.getElementById('mmp-members-tbody');
+    if (!tbody) return;
+
+    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+    const members = activeSpace.members || {};
+    const memberKeys = Object.keys(members);
+
+    if (memberKeys.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:15px; color:var(--text-muted);">No hay otros integrantes registrados con esta passphrase.</td></tr>';
+        return;
+    }
+
+    let html = '';
+    memberKeys.forEach(uid => {
+        const m = members[uid];
+        const p = m.permissions || {};
+        const allowAdd = p.allowAdd !== undefined ? p.allowAdd : true;
+        const allowEdit = p.allowEdit || false;
+        const allowDelete = p.allowDelete || false;
+        const isReadOnly = p.isReadOnly || (!allowAdd && !allowEdit && !allowDelete);
+        const isBlocked = m.isBlocked || false;
+
+        html += `
+            <tr>
+                <td>
+                    <strong>${m.displayName || 'Usuario'}</strong><br>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">${m.email}</span>
+                </td>
+                <td style="text-align:center;">
+                    <input type="checkbox" ${allowAdd && !isReadOnly ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'allowAdd', this.checked)">
+                </td>
+                <td style="text-align:center;">
+                    <input type="checkbox" ${allowEdit && !isReadOnly ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'allowEdit', this.checked)">
+                </td>
+                <td style="text-align:center;">
+                    <input type="checkbox" ${allowDelete && !isReadOnly ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'allowDelete', this.checked)">
+                </td>
+                <td style="text-align:center;">
+                    <input type="checkbox" ${isReadOnly ? 'checked' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'isReadOnly', this.checked)">
+                </td>
+                <td style="text-align:center;">
+                    <input type="checkbox" ${isBlocked ? 'checked' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'isBlocked', this.checked)">
+                </td>
+                <td style="text-align:center;">
+                    <button class="btn-cat-action btn-cat-delete" onclick="removeMember('${moduleName}', '${uid}')" title="Quitar usuario">🗑️</button>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+window.updateMemberPermission = async function(moduleName, uid, field, value) {
+    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+    if (!activeSpace.hash || !activeSpace.isOwner) return;
+
+    if (activeSpace.members[uid]) {
+        if (field === 'isBlocked') {
+            activeSpace.members[uid].isBlocked = value;
+        } else if (field === 'isReadOnly') {
+            activeSpace.members[uid].permissions = activeSpace.members[uid].permissions || {};
+            activeSpace.members[uid].permissions.isReadOnly = value;
+            if (value) {
+                activeSpace.members[uid].permissions.allowAdd = false;
+                activeSpace.members[uid].permissions.allowEdit = false;
+                activeSpace.members[uid].permissions.allowDelete = false;
+            } else {
+                activeSpace.members[uid].permissions.allowAdd = true;
+            }
+        } else {
+            activeSpace.members[uid].permissions = activeSpace.members[uid].permissions || {};
+            activeSpace.members[uid].permissions[field] = value;
+            const p = activeSpace.members[uid].permissions;
+            if (p.allowAdd || p.allowEdit || p.allowDelete) {
+                p.isReadOnly = false;
+            } else {
+                p.isReadOnly = true;
+            }
+        }
+
+        const docRef = doc(db, 'shared_' + moduleName, activeSpace.hash);
+        await updateDoc(docRef, {
+            members: activeSpace.members
+        });
+        renderMembersTable(moduleName);
+        showToast('Permisos actualizados correctamente', 'info');
+    }
+};
+
+window.removeMember = async function(moduleName, uid) {
+    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+    if (!activeSpace.hash || !activeSpace.isOwner) return;
+
+    if (confirm('¿Deseas remover el acceso a este integrante?')) {
+        delete activeSpace.members[uid];
+        const docRef = doc(db, 'shared_' + moduleName, activeSpace.hash);
+        await updateDoc(docRef, {
+            members: activeSpace.members
+        });
+        showToast('Integrante removido del espacio', 'info');
+        renderMembersTable(moduleName);
+    }
+};
+
+function openActivityLogsModal(moduleName) {
+    currentLogsModalModule = moduleName;
+    const modal = document.getElementById('modal-activity-logs');
+    renderAuditLogsModal(moduleName);
+    openModal(modal);
+}
+
+function renderAuditLogsModal(moduleName) {
+    const tbody = document.getElementById('logs-tbody');
+    if (!tbody) return;
+
+    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+    const logs = activeSpace.logs || [];
+
+    if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">No hay eventos de actividad registrados aún.</td></tr>';
+        return;
+    }
+
+    let html = '';
+    logs.forEach(log => {
+        let badgeClass = 'badge-action-crear';
+        if (log.action === 'EDITAR') badgeClass = 'badge-action-editar';
+        else if (log.action === 'ELIMINAR') badgeClass = 'badge-action-eliminar';
+        else if (log.action === 'TRANSFERIR_PROPIEDAD') badgeClass = 'badge-action-transferir';
+
+        html += `
+            <tr>
+                <td style="white-space:nowrap; font-size:0.78rem;">${log.timestamp || ''}</td>
+                <td style="font-size:0.8rem;">${log.userEmail || 'Usuario'}</td>
+                <td><span class="badge-action ${badgeClass}">${log.action || 'CREAR'}</span></td>
+                <td style="font-size:0.8rem;">${log.details || ''}</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
 // --- FUNCIONES DE PERSISTENCIA Y CARGA ---
 
 async function loadTransactions() {
-    // 1. Intentar cargar localmente primero para visualización rápida
     try {
         const stored = localStorage.getItem('transacciones');
-        if (stored) {
-            transactions = JSON.parse(stored);
-        } else {
-            transactions = [];
-        }
+        if (stored) transactions = JSON.parse(stored);
+        else transactions = [];
         
         const storedCats = localStorage.getItem('treasury_categories');
-        if (storedCats) {
-            treasuryCategories = JSON.parse(storedCats);
-        } else {
-            treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
-        }
+        if (storedCats) treasuryCategories = JSON.parse(storedCats);
+        else treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
     } catch (e) {
         console.error('Error cargando transacciones desde localStorage', e);
         transactions = [];
         treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
     }
     
-    // 2. Si hay sesiÓn iniciada en la nube, sincronizar con Firestore
     if (currentUser && db) {
-        try {
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            const docSnap = await getDoc(userDocRef);
-            
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                const cloudData = data.transactions || [];
-                transactions = cloudData;
-                
-                if (data.treasuryCategories !== undefined) {
-                    treasuryCategories = data.treasuryCategories || [...DEFAULT_TREASURY_CATEGORIES];
-                } else {
-                    treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
-                }
-                
-                // Actualizar caché local
-                localStorage.setItem('transacciones', JSON.stringify(transactions));
-                localStorage.setItem('treasury_categories', JSON.stringify(treasuryCategories));
-            } else {
-                // Si no hay datos en la nube pero sí locales, subirlos (migración automática)
-                if (transactions.length > 0 || treasuryCategories.length > 0) {
-                    showToast('Sincronizando tus datos locales con la nube...', 'info');
-                    await saveTransactions();
-                }
-            }
-        } catch (error) {
-            console.error("Error al cargar de Firestore: ", error);
-            showToast('Error al cargar datos en la nube. Usando copia local.', 'warning');
-        }
+        await setupSpaceListener('tesoreria');
     }
     await migrateDataEncoding();
-    
-    // Renderizar datalists de categorías
     renderCategoryDatalists();
 }
 
 async function saveTransactions() {
-    // 1. Guardar localmente siempre como copia de respaldo
     try {
         localStorage.setItem('transacciones', JSON.stringify(transactions));
         localStorage.setItem('treasury_categories', JSON.stringify(treasuryCategories));
@@ -488,15 +947,25 @@ async function saveTransactions() {
         console.error('Error guardando transacciones en localStorage', e);
     }
     
-    // 2. Guardar en la nube si está autenticado
     if (currentUser && db) {
         try {
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            await setDoc(userDocRef, {
-                transactions: transactions,
-                treasuryCategories: treasuryCategories,
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
+            if (activeTreasurySpace.hash) {
+                const spaceDocRef = doc(db, 'shared_tesoreria', activeTreasurySpace.hash);
+                await setDoc(spaceDocRef, {
+                    spaceName: activeTreasurySpace.spaceName || 'Espacio Compartido',
+                    transactions: transactions,
+                    treasuryCategories: treasuryCategories,
+                    logs: activeTreasurySpace.logs || [],
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            } else {
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                await setDoc(userDocRef, {
+                    transactions: transactions,
+                    treasuryCategories: treasuryCategories,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            }
         } catch (error) {
             console.error("Error al guardar en Firestore: ", error);
             showToast('Error al guardar datos en la nube.', 'error');
@@ -546,102 +1015,12 @@ function populateYearFilter(defaultYear) {
     });
 }
 
-// --- FUNCIONES MÓDULO FINANZAS PERSONALES ---
-
-async function loadPersonalFinances() {
-    // 1. Intentar cargar localmente primero
-    try {
-        const storedExpenses = localStorage.getItem('pf_expenses');
-        const storedIncomes = localStorage.getItem('pf_incomes');
-        
-        if (storedExpenses) {
-            personalExpenses = JSON.parse(storedExpenses);
-        } else {
-            personalExpenses = [];
-        }
-        
-        const storedCats = localStorage.getItem('personal_categories');
-        if (storedCats) {
-            personalCategories = JSON.parse(storedCats);
-        } else {
-            personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
-        }
-        
-        if (storedIncomes) {
-            personalIncomes = JSON.parse(storedIncomes);
-        } else {
-            personalIncomes = {};
-            // Backwards compatibility con pf_income antiguo
-            const storedIncome = localStorage.getItem('pf_income');
-            if (storedIncome) {
-                const legacyVal = parseFloat(storedIncome) || 0.00;
-                if (legacyVal > 0) {
-                    const now = new Date();
-                    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                    personalIncomes[currentMonthKey] = legacyVal;
-                }
-            }
-        }
-    } catch (e) {
-        console.error('Error cargando finanzas personales desde localStorage', e);
-        personalExpenses = [];
-        personalIncomes = {};
-        personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
-    }
-    
-    // 2. Sincronizar con Firestore si está logueado
-    if (currentUser && db) {
-        try {
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            const docSnap = await getDoc(userDocRef);
-            
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.personalExpenses !== undefined) {
-                    personalExpenses = data.personalExpenses || [];
-                    localStorage.setItem('pf_expenses', JSON.stringify(personalExpenses));
-                }
-                if (data.personalCategories !== undefined) {
-                    personalCategories = data.personalCategories || [...DEFAULT_PERSONAL_CATEGORIES];
-                    localStorage.setItem('personal_categories', JSON.stringify(personalCategories));
-                } else {
-                    personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
-                }
-                if (data.personalIncomes !== undefined) {
-                    personalIncomes = data.personalIncomes || {};
-                    localStorage.setItem('pf_incomes', JSON.stringify(personalIncomes));
-                } else if (data.personalIncome !== undefined) {
-                    // Migración si tiene el campo legacy en Firestore
-                    const legacyVal = parseFloat(data.personalIncome) || 0.00;
-                    personalIncomes = {};
-                    if (legacyVal > 0) {
-                        const now = new Date();
-                        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                        personalIncomes[currentMonthKey] = legacyVal;
-                    }
-                    localStorage.setItem('pf_incomes', JSON.stringify(personalIncomes));
-                }
-            }
-        } catch (e) {
-            console.error('Error sincronizando finanzas personales con la nube', e);
-        }
-    }
-    await migrateDataEncoding();
-    
-    // Renderizar datalists de categorías
-    renderCategoryDatalists();
-    
-    // Renderizar inputs y datos
-    initPfFilters();
-    renderPersonalFinances();
-}
-
 function initPfFilters() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
-    if (pfFilterMonth) {
+    if (pfFilterMonth && (!pfFilterMonth.value || pfFilterMonth.value === '')) {
         pfFilterMonth.value = currentMonth;
     }
     
@@ -663,9 +1042,14 @@ function populatePfYearFilter(defaultYear) {
         }
     });
     
-    const sortedYears = Array.from(years).sort((a, b) => b - a);
+    Object.keys(personalIncomes).forEach(periodKey => {
+        if (periodKey) {
+            const y = parseInt(periodKey.split('-')[0]);
+            if (!isNaN(y)) years.add(y);
+        }
+    });
     
-    // Guardar selección actual si existe
+    const sortedYears = Array.from(years).sort((a, b) => b - a);
     const currentSel = pfFilterYear.value;
     
     pfFilterYear.innerHTML = '';
@@ -673,19 +1057,371 @@ function populatePfYearFilter(defaultYear) {
         const option = document.createElement('option');
         option.value = year;
         option.textContent = year;
-        if (currentSel) {
-            if (year.toString() === currentSel.toString()) {
-                option.selected = true;
-            }
-        } else if (year === defaultYear) {
+        if (currentSel && year.toString() === currentSel.toString()) {
+            option.selected = true;
+        } else if (!currentSel && year === defaultYear) {
             option.selected = true;
         }
         pfFilterYear.appendChild(option);
     });
+    
+    if (!pfFilterYear.value && sortedYears.length > 0) {
+        pfFilterYear.value = defaultYear;
+    }
+}
+
+// --- FUNCIONES MÓDULO FINANZAS PERSONALES ---
+
+async function setupSpaceListener(moduleName) {
+    if (!currentUser || !db) {
+        if (moduleName === 'tesoreria') render();
+        else renderPersonalFinances();
+        return;
+    }
+    
+    if (moduleName === 'tesoreria') {
+        if (treasuryUnsubscribe) {
+            treasuryUnsubscribe();
+            treasuryUnsubscribe = null;
+        }
+        
+        if (!activeTreasurySpace.hash) {
+            updateSpaceBadgeUI('tesoreria');
+            updateModulePermissionUI('tesoreria');
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            treasuryUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.treasurySpaceName) activeTreasurySpace.spaceName = data.treasurySpaceName;
+                    if (data.treasuryPassphrase) activeTreasurySpace.passphrase = data.treasuryPassphrase;
+                    if (data.transactions && Array.isArray(data.transactions)) {
+                        if (data.transactions.length > 0 || transactions.length === 0) {
+                            transactions = data.transactions;
+                        } else if (transactions.length > 0) {
+                            saveTransactions();
+                        }
+                    } else if (transactions.length > 0) {
+                        saveTransactions();
+                    }
+                    if (data.treasuryCategories && Array.isArray(data.treasuryCategories)) {
+                        treasuryCategories = data.treasuryCategories;
+                    }
+                    if (data.savedWorkspaces) userSavedWorkspaces = data.savedWorkspaces;
+                    localStorage.setItem('transacciones', JSON.stringify(transactions));
+                    localStorage.setItem('treasury_categories', JSON.stringify(treasuryCategories));
+                } else {
+                    if (transactions.length > 0) {
+                        saveTransactions();
+                    }
+                }
+                updateSpaceBadgeUI('tesoreria');
+                render();
+            }, (error) => {
+                console.error("Error en Snapshot Tesorería:", error);
+            });
+            return;
+        }
+        
+        const spaceDocRef = doc(db, 'shared_tesoreria', activeTreasurySpace.hash);
+        treasuryUnsubscribe = onSnapshot(spaceDocRef, async (docSnap) => {
+            if (!docSnap.exists()) {
+                const importCheck = document.getElementById('passphrase-import-local-check');
+                const mmpImportCheck = document.getElementById('mmp-import-local-check');
+                const shouldImport = (importCheck && importCheck.checked) || (mmpImportCheck && mmpImportCheck.checked);
+
+                const initialData = {
+                    spaceName: activeTreasurySpace.spaceName || 'Espacio Compartido',
+                    ownerUid: currentUser.uid,
+                    ownerEmail: currentUser.email,
+                    pendingOwnerTransfer: false,
+                    members: {
+                        [currentUser.uid]: {
+                            email: currentUser.email,
+                            displayName: currentUser.displayName || currentUser.email.split('@')[0],
+                            joinedAt: new Date().toISOString(),
+                            isBlocked: false,
+                            permissions: { allowEdit: true, allowDelete: true }
+                        }
+                    },
+                    transactions: shouldImport ? [...transactions] : [],
+                    treasuryCategories: shouldImport ? [...treasuryCategories] : [...DEFAULT_TREASURY_CATEGORIES],
+                    logs: [{
+                        id: Date.now().toString(),
+                        timestamp: new Date().toLocaleString(),
+                        userEmail: currentUser.email,
+                        action: 'CREAR',
+                        details: shouldImport ? 'Creó el espacio compartido convirtiendo/incluyendo sus datos actuales' : 'Creó el espacio de trabajo compartido en blanco'
+                    }]
+                };
+                await setDoc(spaceDocRef, initialData);
+                activeTreasurySpace.isOwner = true;
+                activeTreasurySpace.permissions = { allowEdit: true, allowDelete: true };
+                activeTreasurySpace.isBlocked = false;
+                activeTreasurySpace.members = initialData.members;
+                activeTreasurySpace.logs = initialData.logs;
+                if (!shouldImport) {
+                    transactions = [];
+                    treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
+                }
+            } else {
+                const data = docSnap.data();
+                
+                if (data.pendingOwnerTransfer && data.ownerEmail && data.ownerEmail.toLowerCase() === currentUser.email.toLowerCase()) {
+                    await updateDoc(spaceDocRef, {
+                        ownerUid: currentUser.uid,
+                        pendingOwnerTransfer: false,
+                        logs: [
+                            {
+                                id: Date.now().toString(),
+                                timestamp: new Date().toLocaleString(),
+                                userEmail: currentUser.email,
+                                action: 'TRANSFERIR_PROPIEDAD',
+                                details: `Asumió el cargo de Tesorero Principal por transferencia.`
+                            },
+                            ...(data.logs || []).slice(0, 99)
+                        ]
+                    });
+                    showToast('🎉 ¡Bienvenido! Has sido reconocido como el nuevo Tesorero Principal de este espacio.', 'success');
+                }
+                
+                const isOwner = data.ownerUid === currentUser.uid || (data.ownerEmail && data.ownerEmail.toLowerCase() === currentUser.email.toLowerCase());
+                activeTreasurySpace.isOwner = isOwner;
+                activeTreasurySpace.spaceName = data.spaceName || activeTreasurySpace.spaceName;
+                activeTreasurySpace.members = data.members || {};
+                activeTreasurySpace.logs = data.logs || [];
+                
+                if (!activeTreasurySpace.members[currentUser.uid] && !isOwner) {
+                    activeTreasurySpace.members[currentUser.uid] = {
+                        email: currentUser.email,
+                        displayName: currentUser.displayName || currentUser.email.split('@')[0],
+                        joinedAt: new Date().toISOString(),
+                        isBlocked: false,
+                        permissions: { allowEdit: false, allowDelete: false }
+                    };
+                    await updateDoc(spaceDocRef, {
+                        members: activeTreasurySpace.members
+                    });
+                }
+                
+                const userMemberData = activeTreasurySpace.members[currentUser.uid];
+                const isBlocked = userMemberData ? userMemberData.isBlocked : false;
+                activeTreasurySpace.isBlocked = isBlocked;
+                
+                if (isBlocked) {
+                    showToast('🛑 Acceso Restringido: Tu cuenta ha sido bloqueada para este módulo.', 'error');
+                    const blockedAlert = document.getElementById('passphrase-blocked-alert');
+                    if (blockedAlert) blockedAlert.classList.remove('hidden-element');
+                    openPassphraseModal('tesoreria');
+                    return;
+                }
+                
+                if (isOwner) {
+                    activeTreasurySpace.permissions = { allowEdit: true, allowDelete: true };
+                } else if (userMemberData && userMemberData.permissions) {
+                    activeTreasurySpace.permissions = userMemberData.permissions;
+                } else {
+                    activeTreasurySpace.permissions = { allowEdit: false, allowDelete: false };
+                }
+                
+                transactions = data.transactions || [];
+                if (data.treasuryCategories) treasuryCategories = data.treasuryCategories;
+            }
+            
+            updateSpaceBadgeUI('tesoreria');
+            updateModulePermissionUI('tesoreria');
+            render();
+            renderAuditLogsModal('tesoreria');
+            renderMembersTable('tesoreria');
+        });
+    } else {
+        if (personalUnsubscribe) {
+            personalUnsubscribe();
+            personalUnsubscribe = null;
+        }
+        
+        if (!activePersonalSpace.hash) {
+            updateSpaceBadgeUI('personales');
+            updateModulePermissionUI('personales');
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            personalUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.personalSpaceName) activePersonalSpace.spaceName = data.personalSpaceName;
+                    if (data.personalPassphrase) activePersonalSpace.passphrase = data.personalPassphrase;
+                    if (data.personalExpenses && Array.isArray(data.personalExpenses)) {
+                        if (data.personalExpenses.length > 0 || personalExpenses.length === 0) {
+                            personalExpenses = data.personalExpenses;
+                        } else if (personalExpenses.length > 0) {
+                            savePersonalFinances();
+                        }
+                    } else if (personalExpenses.length > 0) {
+                        savePersonalFinances();
+                    }
+                    
+                    if (data.personalIncomes && typeof data.personalIncomes === 'object') {
+                        if (Object.keys(data.personalIncomes).length > 0 || Object.keys(personalIncomes).length === 0) {
+                            personalIncomes = data.personalIncomes;
+                        } else if (Object.keys(personalIncomes).length > 0) {
+                            savePersonalFinances();
+                        }
+                    } else if (data.personalIncome !== undefined) {
+                        const legacyVal = parseFloat(data.personalIncome) || 0.00;
+                        if (legacyVal > 0) {
+                            const now = new Date();
+                            const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                            personalIncomes[currentMonthKey] = legacyVal;
+                        }
+                    } else if (Object.keys(personalIncomes).length > 0) {
+                        savePersonalFinances();
+                    }
+                    
+                    if (data.personalCategories && Array.isArray(data.personalCategories)) {
+                        personalCategories = data.personalCategories;
+                    }
+                    if (data.savedWorkspaces) userSavedWorkspaces = data.savedWorkspaces;
+                    
+                    localStorage.setItem('pf_expenses', JSON.stringify(personalExpenses));
+                    localStorage.setItem('pf_incomes', JSON.stringify(personalIncomes));
+                    localStorage.setItem('personal_categories', JSON.stringify(personalCategories));
+                } else {
+                    if (personalExpenses.length > 0 || Object.keys(personalIncomes).length > 0) {
+                        savePersonalFinances();
+                    }
+                }
+                updateSpaceBadgeUI('personales');
+                initPfFilters();
+                renderPersonalFinances();
+            }, (error) => {
+                console.error("Error en Snapshot Finanzas Personales:", error);
+            });
+            return;
+        }
+        
+        const spaceDocRef = doc(db, 'shared_personales', activePersonalSpace.hash);
+        personalUnsubscribe = onSnapshot(spaceDocRef, async (docSnap) => {
+            if (!docSnap.exists()) {
+                const importCheck = document.getElementById('passphrase-import-local-check');
+                const mmpImportCheck = document.getElementById('mmp-import-local-check');
+                const shouldImport = (importCheck && importCheck.checked) || (mmpImportCheck && mmpImportCheck.checked);
+
+                const initialData = {
+                    spaceName: activePersonalSpace.spaceName || 'Espacio Compartido',
+                    ownerUid: currentUser.uid,
+                    ownerEmail: currentUser.email,
+                    members: {
+                        [currentUser.uid]: {
+                            email: currentUser.email,
+                            displayName: currentUser.displayName || currentUser.email.split('@')[0],
+                            joinedAt: new Date().toISOString(),
+                            isBlocked: false,
+                            permissions: { allowEdit: true, allowDelete: true }
+                        }
+                    },
+                    personalExpenses: shouldImport ? [...personalExpenses] : [],
+                    personalIncomes: shouldImport ? JSON.parse(JSON.stringify(personalIncomes)) : {},
+                    personalCategories: shouldImport ? [...personalCategories] : [...DEFAULT_PERSONAL_CATEGORIES],
+                    logs: [{
+                        id: Date.now().toString(),
+                        timestamp: new Date().toLocaleString(),
+                        userEmail: currentUser.email,
+                        action: 'CREAR',
+                        details: shouldImport ? 'Creó el espacio compartido convirtiendo/incluyendo sus datos actuales' : 'Creó el espacio de finanzas compartidas en blanco'
+                    }]
+                };
+                await setDoc(spaceDocRef, initialData);
+                activePersonalSpace.isOwner = true;
+                activePersonalSpace.permissions = { allowEdit: true, allowDelete: true };
+                activePersonalSpace.isBlocked = false;
+                activePersonalSpace.members = initialData.members;
+                activePersonalSpace.logs = initialData.logs;
+                if (!shouldImport) {
+                    personalExpenses = [];
+                    personalIncomes = {};
+                    personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
+                }
+            } else {
+                const data = docSnap.data();
+                const isOwner = data.ownerUid === currentUser.uid || (data.ownerEmail && data.ownerEmail.toLowerCase() === currentUser.email.toLowerCase());
+                activePersonalSpace.isOwner = isOwner;
+                activePersonalSpace.spaceName = data.spaceName || activePersonalSpace.spaceName;
+                activePersonalSpace.members = data.members || {};
+                activePersonalSpace.logs = data.logs || [];
+                
+                if (!activePersonalSpace.members[currentUser.uid] && !isOwner) {
+                    activePersonalSpace.members[currentUser.uid] = {
+                        email: currentUser.email,
+                        displayName: currentUser.displayName || currentUser.email.split('@')[0],
+                        joinedAt: new Date().toISOString(),
+                        isBlocked: false,
+                        permissions: { allowEdit: false, allowDelete: false }
+                    };
+                    await updateDoc(spaceDocRef, {
+                        members: activePersonalSpace.members
+                    });
+                }
+                
+                const userMemberData = activePersonalSpace.members[currentUser.uid];
+                const isBlocked = userMemberData ? userMemberData.isBlocked : false;
+                activePersonalSpace.isBlocked = isBlocked;
+                
+                if (isBlocked) {
+                    showToast('🛑 Acceso Restringido: Tu cuenta ha sido bloqueada para este módulo.', 'error');
+                    const blockedAlert = document.getElementById('passphrase-blocked-alert');
+                    if (blockedAlert) blockedAlert.classList.remove('hidden-element');
+                    openPassphraseModal('personales');
+                    return;
+                }
+                
+                if (isOwner) {
+                    activePersonalSpace.permissions = { allowEdit: true, allowDelete: true };
+                } else if (userMemberData && userMemberData.permissions) {
+                    activePersonalSpace.permissions = userMemberData.permissions;
+                } else {
+                    activePersonalSpace.permissions = { allowEdit: false, allowDelete: false };
+                }
+                
+                personalExpenses = data.personalExpenses || [];
+                personalIncomes = data.personalIncomes || {};
+                if (data.personalCategories) personalCategories = data.personalCategories;
+            }
+            
+            updateSpaceBadgeUI('personales');
+            updateModulePermissionUI('personales');
+            renderPersonalFinances();
+            renderAuditLogsModal('personales');
+            renderMembersTable('personales');
+        });
+    }
+}
+
+async function loadPersonalFinances() {
+    try {
+        const storedExpenses = localStorage.getItem('pf_expenses');
+        const storedIncomes = localStorage.getItem('pf_incomes');
+        if (storedExpenses) personalExpenses = JSON.parse(storedExpenses);
+        else personalExpenses = [];
+        const storedCats = localStorage.getItem('personal_categories');
+        if (storedCats) personalCategories = JSON.parse(storedCats);
+        else personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
+        if (storedIncomes) personalIncomes = JSON.parse(storedIncomes);
+        else personalIncomes = {};
+    } catch (e) {
+        console.error('Error cargando finanzas personales desde localStorage', e);
+        personalExpenses = [];
+        personalIncomes = {};
+        personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
+    }
+    
+    if (currentUser && db) {
+        await setupSpaceListener('personales');
+    }
+    await migrateDataEncoding();
+    renderCategoryDatalists();
+    initPfFilters();
+    renderPersonalFinances();
 }
 
 async function savePersonalFinances() {
-    // 1. Guardar localmente
     try {
         localStorage.setItem('pf_expenses', JSON.stringify(personalExpenses));
         localStorage.setItem('pf_incomes', JSON.stringify(personalIncomes));
@@ -694,18 +1430,30 @@ async function savePersonalFinances() {
         console.error('Error guardando en localStorage', e);
     }
     
-    // 2. Guardar en la nube si está logueado
     if (currentUser && db) {
         try {
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            await setDoc(userDocRef, {
-                personalExpenses: personalExpenses,
-                personalIncomes: personalIncomes,
-                personalCategories: personalCategories
-            }, { merge: true });
+            if (activePersonalSpace.hash) {
+                const spaceDocRef = doc(db, 'shared_personales', activePersonalSpace.hash);
+                await setDoc(spaceDocRef, {
+                    spaceName: activePersonalSpace.spaceName || 'Espacio Compartido',
+                    personalExpenses: personalExpenses,
+                    personalIncomes: personalIncomes,
+                    personalCategories: personalCategories,
+                    logs: activePersonalSpace.logs || [],
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            } else {
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                await setDoc(userDocRef, {
+                    personalExpenses: personalExpenses,
+                    personalIncomes: personalIncomes,
+                    personalCategories: personalCategories,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            }
         } catch (e) {
             console.error('Error guardando finanzas personales en Firestore', e);
-            showToast('Error de sincronizaciÓn con la nube.', 'error');
+            showToast('Error de sincronización con la nube.', 'error');
         }
     }
 }
@@ -1004,18 +1752,20 @@ function renderPersonalFinances() {
                         <button class="btn-payment-state ${isPaid ? 'btn-state-paid' : 'btn-state-unpaid'}" data-id="${item.id}">
                             ${isPaid ? 'Pagado' : 'Pagar'}
                         </button>
+                        ${activePersonalSpace.permissions.allowEdit ? `
                         <button class="btn-edit-item" data-id="${item.id}" title="Editar gasto">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                 <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                             </svg>
-                        </button>
+                        </button>` : ''}
+                        ${activePersonalSpace.permissions.allowDelete ? `
                         <button class="btn-delete-item" data-id="${item.id}" title="Eliminar gasto">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"/>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                             </svg>
-                        </button>
+                        </button>` : ''}
                     </div>
                 </div>
             `;
@@ -1053,7 +1803,12 @@ function renderPersonalFinances() {
 
 async function handlePfExpenseSubmit(e) {
     e.preventDefault();
-    
+
+    if (activePersonalSpace.permissions.isReadOnly || activePersonalSpace.permissions.allowAdd === false) {
+        showToast('🛑 Modo Solo Lectura: No tienes permiso para registrar gastos.', 'error');
+        return;
+    }
+
     const conceptVal = pfConcept.value.trim();
     const amountVal = parseFloat(pfAmount.value) || 0;
     const typeVal = pfType.value;
@@ -1086,6 +1841,7 @@ async function handlePfExpenseSubmit(e) {
             personalExpenses[idx].categoria = categoryVal;
             
             await savePersonalFinances();
+            addAuditLog('personales', 'EDITAR', `Modificó gasto "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
             showToast('Gasto personal actualizado con éxito.', 'success');
             
             // Restablecer el botón de envío y limpiar estado de edición
@@ -1105,6 +1861,7 @@ async function handlePfExpenseSubmit(e) {
         
         personalExpenses.unshift(newExpense);
         await savePersonalFinances();
+        addAuditLog('personales', 'CREAR', `Registró gasto "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
         showToast('Gasto personal registrado con éxito.', 'success');
         
         // Resetear formulario
@@ -1223,8 +1980,12 @@ async function togglePersonalExpenseState(id) {
 async function deletePersonalExpense(id) {
     const idx = personalExpenses.findIndex(e => e.id === id);
     if (idx !== -1) {
+        const targetItem = personalExpenses[idx];
         personalExpenses.splice(idx, 1);
         await savePersonalFinances();
+        if (targetItem) {
+            addAuditLog('personales', 'ELIMINAR', `Eliminó gasto "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
+        }
         renderPersonalFinances();
         showToast('Gasto personal eliminado.', 'info');
     }
@@ -2060,8 +2821,8 @@ function setupEventListeners() {
     btnClearCancel.addEventListener('click', () => closeModal(modalClear));
     btnClearConfirm.addEventListener('click', executeClearData);
     
-    // Habilitar cierre de modales con la 'X' superior
-    document.querySelectorAll('.modal-close-btn').forEach(btn => {
+    // Habilitar cierre de modales con la 'X' superior y los botones 'Cerrar' al pie
+    document.querySelectorAll('.modal-close-btn, #btn-mmp-close, #btn-logs-close').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const modal = e.target.closest('.modal-overlay');
             if (modal) closeModal(modal);
@@ -2111,12 +2872,16 @@ function setupEventListeners() {
         });
     }
     
-    // Navegación de módulos
+    // Navegación de módulos con Passphrase y Espacios
     if (btnGotoTesoreria) {
-        btnGotoTesoreria.addEventListener('click', () => showModule('tesoreria'));
+        btnGotoTesoreria.addEventListener('click', () => {
+            openPassphraseModal('tesoreria');
+        });
     }
     if (btnGotoPersonales) {
-        btnGotoPersonales.addEventListener('click', () => showModule('personales'));
+        btnGotoPersonales.addEventListener('click', () => {
+            openPassphraseModal('personales');
+        });
     }
     if (btnBackToMenu) {
         btnBackToMenu.addEventListener('click', () => showModule('menu'));
@@ -2125,6 +2890,370 @@ function setupEventListeners() {
         headerLogo.addEventListener('click', () => {
             if (currentUser) {
                 showModule('menu');
+            }
+        });
+    }
+
+    // Botones de Espacios y Passphrases
+    const btnTSwitchSpace = document.getElementById('btn-t-switch-space');
+    if (btnTSwitchSpace) {
+        btnTSwitchSpace.addEventListener('click', () => openPassphraseModal('tesoreria', true));
+    }
+
+    const btnPfSwitchSpace = document.getElementById('btn-pf-switch-space');
+    if (btnPfSwitchSpace) {
+        btnPfSwitchSpace.addEventListener('click', () => openPassphraseModal('personales', true));
+    }
+
+    const btnConfigPassphrase = document.getElementById('btn-config-passphrase');
+    if (btnConfigPassphrase) {
+        btnConfigPassphrase.addEventListener('click', () => openManagePassphraseModal('tesoreria'));
+    }
+
+    const btnPfConfigPassphrase = document.getElementById('btn-pf-config-passphrase');
+    if (btnPfConfigPassphrase) {
+        btnPfConfigPassphrase.addEventListener('click', () => openManagePassphraseModal('personales'));
+    }
+
+    const btnActivityLogs = document.getElementById('btn-activity-logs');
+    if (btnActivityLogs) {
+        btnActivityLogs.addEventListener('click', () => openActivityLogsModal('tesoreria'));
+    }
+
+    const btnPfActivityLogs = document.getElementById('btn-pf-activity-logs');
+    if (btnPfActivityLogs) {
+        btnPfActivityLogs.addEventListener('click', () => openActivityLogsModal('personales'));
+    }
+
+    // Formulario de Ingreso de Passphrase
+    const formEnterPassphrase = document.getElementById('form-enter-passphrase');
+    if (formEnterPassphrase) {
+        formEnterPassphrase.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inputPass = document.getElementById('passphrase-input');
+            const passVal = inputPass ? inputPass.value.trim() : '';
+
+            if (!passVal) {
+                showToast('Por favor introduce una frase de acceso (Passphrase) válida.', 'warning');
+                return;
+            }
+
+            const hash = await hashPassphrase(currentPassphraseModalModule, passVal);
+
+            // Obtener automáticamente el Nombre oficial creado por el Propietario desde Firestore
+            let name = `Espacio ${passVal}`;
+            if (db) {
+                const collectionName = currentPassphraseModalModule === 'tesoreria' ? 'shared_tesoreria' : 'shared_personales';
+                const spaceDocRef = doc(db, collectionName, hash);
+                const docSnap = await getDoc(spaceDocRef);
+                if (docSnap.exists() && docSnap.data().spaceName) {
+                    name = docSnap.data().spaceName;
+                }
+            }
+
+            const savedList = userSavedWorkspaces[currentPassphraseModalModule] || [];
+            const existingIdx = savedList.findIndex(w => w.hash === hash);
+            if (existingIdx >= 0) {
+                savedList[existingIdx].name = name;
+                savedList[existingIdx].passphrase = passVal;
+            } else {
+                savedList.push({ hash, passphrase: passVal, name });
+            }
+            userSavedWorkspaces[currentPassphraseModalModule] = savedList;
+            await saveSavedWorkspacesToUser();
+
+            if (currentPassphraseModalModule === 'tesoreria') {
+                activeTreasurySpace = {
+                    passphrase: passVal,
+                    hash,
+                    spaceName: name,
+                    isOwner: false,
+                    permissions: { allowEdit: false, allowDelete: false },
+                    isBlocked: false,
+                    members: {},
+                    logs: []
+                };
+                await setupSpaceListener('tesoreria');
+            } else {
+                activePersonalSpace = {
+                    passphrase: passVal,
+                    hash,
+                    spaceName: name,
+                    isOwner: false,
+                    permissions: { allowEdit: false, allowDelete: false },
+                    isBlocked: false,
+                    members: {},
+                    logs: []
+                };
+                await setupSpaceListener('personales');
+            }
+
+            if (inputPass) inputPass.value = '';
+            closePassphraseModal();
+            showModule(currentPassphraseModalModule);
+        });
+    }
+
+    // Botón Continuar a Cuenta Personal / Cerrar Modal
+    const btnPassphraseSkip = document.getElementById('btn-passphrase-skip');
+    if (btnPassphraseSkip) {
+        btnPassphraseSkip.addEventListener('click', async () => {
+            if (currentPassphraseIsSwitching) {
+                closePassphraseModal();
+                return;
+            }
+
+            if (currentPassphraseModalModule === 'tesoreria') {
+                activeTreasurySpace = {
+                    passphrase: '',
+                    hash: '',
+                    spaceName: 'Cuenta Personal (Google)',
+                    isOwner: true,
+                    permissions: { allowEdit: true, allowDelete: true },
+                    isBlocked: false,
+                    members: {},
+                    logs: []
+                };
+                await setupSpaceListener('tesoreria');
+            } else {
+                activePersonalSpace = {
+                    passphrase: '',
+                    hash: '',
+                    spaceName: 'Cuenta Personal (Google)',
+                    isOwner: true,
+                    permissions: { allowEdit: true, allowDelete: true },
+                    isBlocked: false,
+                    members: {},
+                    logs: []
+                };
+                await setupSpaceListener('personales');
+            }
+            closePassphraseModal();
+            showModule(currentPassphraseModalModule);
+        });
+    }
+
+    // Alternar visibilidad de contraseña
+    const btnTogglePassVis = document.getElementById('btn-toggle-passphrase-vis');
+    if (btnTogglePassVis) {
+        btnTogglePassVis.addEventListener('click', () => {
+            const inputPass = document.getElementById('passphrase-input');
+            if (inputPass) {
+                inputPass.type = inputPass.type === 'password' ? 'text' : 'password';
+            }
+        });
+    }
+
+    // Manejadores de pestañas en modal de gestión de espacio
+    const mmpTabEdit = document.getElementById('mmp-tab-edit');
+    const mmpTabCreate = document.getElementById('mmp-tab-create');
+    if (mmpTabEdit) mmpTabEdit.addEventListener('click', () => setMmpMode('edit'));
+    if (mmpTabCreate) mmpTabCreate.addEventListener('click', () => setMmpMode('create'));
+
+    // Formulario de Configuración / Creación de Espacio
+    const mmpSpaceForm = document.getElementById('mmp-space-form');
+    if (mmpSpaceForm) {
+        mmpSpaceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newNameEl = document.getElementById('mmp-space-name-input');
+            const newPassEl = document.getElementById('mmp-passphrase-input');
+            const newName = newNameEl ? newNameEl.value.trim() : '';
+            const newPass = newPassEl ? newPassEl.value.trim() : '';
+
+            if (!newName) {
+                showToast('Por favor ingrese un nombre para el espacio.', 'error');
+                return;
+            }
+
+            const isTreasury = currentManagePassphraseModule === 'tesoreria';
+            const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
+
+            try {
+                if (currentMmpMode === 'create') {
+                    if (!newPass) {
+                        showToast('Por favor ingrese una frase de acceso (Passphrase) para el nuevo espacio.', 'error');
+                        return;
+                    }
+                    const hash = await hashPassphrase(currentManagePassphraseModule, newPass);
+                    const copyCheck = document.getElementById('mmp-copy-local-check');
+                    const shouldCopy = copyCheck ? copyCheck.checked : false;
+
+                    if (isTreasury) {
+                        activeTreasurySpace = {
+                            passphrase: newPass,
+                            hash,
+                            spaceName: newName,
+                            isOwner: true,
+                            permissions: { allowEdit: true, allowDelete: true },
+                            isBlocked: false,
+                            members: {},
+                            logs: []
+                        };
+                    } else {
+                        activePersonalSpace = {
+                            passphrase: newPass,
+                            hash,
+                            spaceName: newName,
+                            isOwner: true,
+                            permissions: { allowEdit: true, allowDelete: true },
+                            isBlocked: false,
+                            members: {},
+                            logs: []
+                        };
+                    }
+
+                    const savedList = userSavedWorkspaces[currentManagePassphraseModule] || [];
+                    if (!savedList.some(w => w.hash === hash)) {
+                        savedList.push({ hash, passphrase: newPass, name: newName });
+                        userSavedWorkspaces[currentManagePassphraseModule] = savedList;
+                        await saveSavedWorkspacesToUser();
+                    }
+
+                    const passImportCheck = document.getElementById('passphrase-import-local-check');
+                    if (passImportCheck) passImportCheck.checked = shouldCopy;
+
+                    await setupSpaceListener(currentManagePassphraseModule);
+                    showToast(`🎉 ¡Nuevo espacio '${newName}' creado e iniciado correctamente!`, 'success');
+                } else {
+                    // Modo Edición del espacio activo (Local o Compartido)
+                    activeSpace.spaceName = newName;
+
+                    if (newPass && !activeSpace.hash) {
+                        // Al asignar Passphrase a la Cuenta Personal, se conecta a Espacio Compartido manteniendo todos los datos actuales
+                        const hash = await hashPassphrase(currentManagePassphraseModule, newPass);
+                        activeSpace.hash = hash;
+                        activeSpace.passphrase = newPass;
+                        activeSpace.isOwner = true;
+                        activeSpace.permissions = { allowEdit: true, allowDelete: true };
+
+                        const savedList = userSavedWorkspaces[currentManagePassphraseModule] || [];
+                        if (!savedList.some(w => w.hash === hash)) {
+                            savedList.push({ hash, passphrase: newPass, name: newName });
+                            userSavedWorkspaces[currentManagePassphraseModule] = savedList;
+                            await saveSavedWorkspacesToUser();
+                        }
+
+                        await setupSpaceListener(currentManagePassphraseModule);
+                        showToast(`🎉 ¡Tu espacio '${newName}' se ha guardado con tu nueva Passphrase y está activo!`, 'success');
+                    } else {
+                        if (newPass) activeSpace.passphrase = newPass;
+
+                        if (currentUser && db) {
+                            if (activeSpace.hash) {
+                                // Espacio Compartido Conectado
+                                const collectionName = isTreasury ? 'shared_tesoreria' : 'shared_personales';
+                                const docRef = doc(db, collectionName, activeSpace.hash);
+                                const updatePayload = {
+                                    spaceName: newName,
+                                    updatedAt: new Date().toISOString()
+                                };
+                                if (newPass) {
+                                    const newHash = await hashPassphrase(currentManagePassphraseModule, newPass);
+                                    updatePayload.passphrase = newPass;
+                                    updatePayload.passphraseHash = newHash;
+                                }
+                                await setDoc(docRef, updatePayload, { merge: true });
+                            } else {
+                                // Cuenta Personal (Sin Passphrase)
+                                const userDocRef = doc(db, 'users', currentUser.uid);
+                                await setDoc(userDocRef, {
+                                    [isTreasury ? 'treasurySpaceName' : 'personalSpaceName']: newName,
+                                    updatedAt: new Date().toISOString()
+                                }, { merge: true });
+                            }
+                        }
+                        updateSpaceBadgeUI(currentManagePassphraseModule);
+                        showToast('✅ Información de tu espacio actualizada correctamente.', 'success');
+                    }
+                }
+
+                closeModal(document.getElementById('modal-manage-passphrase'));
+            } catch (err) {
+                console.error("Error al guardar espacio:", err);
+                showToast('Error al guardar cambios de espacio.', 'error');
+            }
+        });
+    }
+
+    // Formulario de Transferencia de Propiedad (Exclusivo Módulo de Tesorería)
+    const mmpTransferForm = document.getElementById('mmp-transfer-form');
+    if (mmpTransferForm) {
+        mmpTransferForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newEmailInput = document.getElementById('mmp-new-owner-email');
+            const newEmail = newEmailInput ? newEmailInput.value.trim() : '';
+            if (!newEmail) return;
+
+            const activeSpace = activeTreasurySpace;
+            const isOwner = activeSpace.isOwner || !activeSpace.hash;
+            if (!isOwner) {
+                showToast('Solo el Tesorero Principal puede transferir la propiedad.', 'error');
+                return;
+            }
+
+            if (confirm(`¿Estás seguro de transferir los derechos de Tesorero Principal a ${newEmail}? Tu rol pasará a ser integrante estándar.`)) {
+                try {
+                    let spaceHash = activeSpace.hash;
+                    if (!spaceHash) {
+                        const autoPass = activeSpace.passphrase || 'tesoreria2026';
+                        spaceHash = await hashPassphrase('tesoreria', autoPass);
+                        activeSpace.hash = spaceHash;
+                        activeSpace.passphrase = autoPass;
+                        activeSpace.spaceName = activeSpace.spaceName || 'Tesorería Iglesia';
+                    }
+
+                    const spaceDocRef = doc(db, 'shared_tesoreria', spaceHash);
+                    const docSnap = await getDoc(spaceDocRef);
+                    if (!docSnap.exists()) {
+                        await setDoc(spaceDocRef, {
+                            spaceName: activeSpace.spaceName,
+                            ownerUid: currentUser.uid,
+                            ownerEmail: newEmail,
+                            pendingOwnerTransfer: true,
+                            members: {
+                                [currentUser.uid]: {
+                                    email: currentUser.email,
+                                    displayName: currentUser.displayName || currentUser.email.split('@')[0],
+                                    joinedAt: new Date().toISOString(),
+                                    isBlocked: false,
+                                    permissions: { allowEdit: true, allowDelete: true }
+                                }
+                            },
+                            transactions: [...transactions],
+                            treasuryCategories: [...treasuryCategories],
+                            logs: [{
+                                id: Date.now().toString(),
+                                timestamp: new Date().toLocaleString(),
+                                userEmail: currentUser.email,
+                                action: 'TRANSFERIR_PROPIEDAD',
+                                details: `Transfirió la propiedad del módulo de Tesorería a ${newEmail}`
+                            }]
+                        });
+                    } else {
+                        await updateDoc(spaceDocRef, {
+                            ownerEmail: newEmail,
+                            pendingOwnerTransfer: true,
+                            logs: [
+                                {
+                                    id: Date.now().toString(),
+                                    timestamp: new Date().toLocaleString(),
+                                    userEmail: currentUser.email,
+                                    action: 'TRANSFERIR_PROPIEDAD',
+                                    details: `Transfirió la propiedad del módulo de Tesorería a ${newEmail}`
+                                },
+                                ...(activeSpace.logs || []).slice(0, 99)
+                            ]
+                        });
+                    }
+
+                    await setupSpaceListener('tesoreria');
+                    if (newEmailInput) newEmailInput.value = '';
+                    closeModal(document.getElementById('modal-manage-passphrase'));
+                    showToast(`✅ Transferencia de Tesorero Principal enviada a ${newEmail}.`, 'success');
+                } catch (err) {
+                    console.error("Error al transferir propiedad:", err);
+                    showToast('Error al transferir la propiedad.', 'error');
+                }
             }
         });
     }
@@ -2522,31 +3651,35 @@ function render() {
             const tdAcciones = document.createElement('td');
             tdAcciones.className = 'text-right';
             
-            // Botón Editar
-            const btnEdit = document.createElement('button');
-            btnEdit.className = 'btn-edit';
-            btnEdit.setAttribute('aria-label', 'Editar transacción');
-            btnEdit.innerHTML = `
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-            `;
-            btnEdit.addEventListener('click', () => startEditTransaction(t.id));
-            tdAcciones.appendChild(btnEdit);
+            // Botón Editar (Si tiene permiso)
+            if (activeTreasurySpace.permissions.allowEdit) {
+                const btnEdit = document.createElement('button');
+                btnEdit.className = 'btn-edit';
+                btnEdit.setAttribute('aria-label', 'Editar transacción');
+                btnEdit.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                `;
+                btnEdit.addEventListener('click', () => startEditTransaction(t.id));
+                tdAcciones.appendChild(btnEdit);
+            }
             
-            // Botón Eliminar
-            const btnDel = document.createElement('button');
-            btnDel.className = 'btn-delete';
-            btnDel.setAttribute('aria-label', 'Eliminar transacción');
-            btnDel.innerHTML = `
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                </svg>
-            `;
-            btnDel.addEventListener('click', () => requestDeleteTransaction(t.id));
-            tdAcciones.appendChild(btnDel);
+            // Botón Eliminar (Si tiene permiso)
+            if (activeTreasurySpace.permissions.allowDelete) {
+                const btnDel = document.createElement('button');
+                btnDel.className = 'btn-delete';
+                btnDel.setAttribute('aria-label', 'Eliminar transacción');
+                btnDel.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                `;
+                btnDel.addEventListener('click', () => requestDeleteTransaction(t.id));
+                tdAcciones.appendChild(btnDel);
+            }
             tr.appendChild(tdAcciones);
             
             transactionsTableBody.appendChild(tr);
@@ -2561,7 +3694,12 @@ function render() {
 
 function handleFormSubmit(e) {
     e.preventDefault();
-    
+
+    if (activeTreasurySpace.permissions.isReadOnly || activeTreasurySpace.permissions.allowAdd === false) {
+        showToast('🛑 Modo Solo Lectura: No tienes permiso para agregar transacciones.', 'error');
+        return;
+    }
+
     const fecha = inputDate.value;
     const concepto = inputConcept.value.trim();
     const montoRaw = inputAmount.value;
@@ -2600,6 +3738,7 @@ function handleFormSubmit(e) {
             transactions[idx].categoria = categoria;
             transactions[idx].monto = monto;
             
+            addAuditLog('tesoreria', 'EDITAR', `Modificó ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
             saveTransactions();
             showToast('Transacción modificada con éxito.', 'success');
             
@@ -2631,6 +3770,7 @@ function handleFormSubmit(e) {
     // Añadir al inicio o guardar
     transactions.push(newTransaction);
     
+    addAuditLog('tesoreria', 'CREAR', `Registró ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
     // Guardar en localStorage
     saveTransactions();
     
@@ -2744,10 +3884,14 @@ function requestDeleteTransaction(id) {
 function confirmDeleteTransaction() {
     if (!selectedTransactionIdToDelete) return;
     
+    const targetItem = transactions.find(t => t.id === selectedTransactionIdToDelete);
     const initialCount = transactions.length;
     transactions = transactions.filter(t => t.id !== selectedTransactionIdToDelete);
     
     if (transactions.length < initialCount) {
+        if (targetItem) {
+            addAuditLog('tesoreria', 'ELIMINAR', `Eliminó ${targetItem.tipo} "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
+        }
         saveTransactions();
         showToast('Transacción eliminada correctamente.', 'success');
     }

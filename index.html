@@ -193,7 +193,21 @@
         <div id="personal-finances-container" class="personal-finances-container hidden-element">
             <!-- Título y Filtros -->
             <div class="pf-header-section" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-color);">Resumen de Finanzas</h2>
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-color);">Resumen de Finanzas</h2>
+                    <div id="pf-space-badge-container" class="space-badge-container">
+                        <div id="pf-space-badge" class="space-badge">
+                            <span class="space-icon">🟢</span>
+                            <span id="pf-space-name">Cuenta Personal</span>
+                        </div>
+                        <button id="btn-pf-switch-space" class="space-switcher-btn" title="Cambiar espacio o passphrase">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                            </svg>
+                            <span>Cambiar Espacio</span>
+                        </button>
+                    </div>
+                </div>
                 <div class="filters-container">
                     <select id="pf-filter-month" aria-label="Seleccionar mes de finanzas personales">
                         <option value="all">Todos (Anual)</option>
@@ -426,6 +440,22 @@
                         </svg>
                         Configurar Categorías
                     </button>
+                    <button id="btn-pf-config-passphrase" class="btn-outline">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        Configurar Passphrase
+                    </button>
+                    <button id="btn-pf-activity-logs" class="btn-outline">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                        Logs de Actividad
+                    </button>
                     <input type="file" id="pf-csv-file-input" accept=".csv, text/csv, application/vnd.ms-excel, text/plain" class="hidden-file-input" aria-hidden="true">
                     
                     <button id="btn-pf-clear-data" class="btn-danger-outline">
@@ -441,6 +471,23 @@
 
         <!-- Contenedor del Dashboard principal (oculto antes de iniciar sesión) -->
         <div id="dashboard-container" class="dashboard-container hidden-element">
+
+        <!-- Header y Estado de Espacio en Tesorería -->
+        <div class="t-header-section" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-color);">Gestión de Tesorería</h2>
+            <div id="tesoreria-space-badge-container" class="space-badge-container">
+                <div id="t-space-badge" class="space-badge">
+                    <span class="space-icon">🟢</span>
+                    <span id="t-space-name">Cuenta Personal</span>
+                </div>
+                <button id="btn-t-switch-space" class="space-switcher-btn" title="Cambiar espacio o passphrase">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                    <span>Cambiar Espacio</span>
+                </button>
+            </div>
+        </div>
 
         <!-- Formulario Registrar Transacción -->
         <section class="section-card form-section">
@@ -648,6 +695,22 @@
                     </svg>
                     Configurar Categorías
                 </button>
+                <button id="btn-config-passphrase" class="btn-outline">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    Configurar Passphrase
+                </button>
+                <button id="btn-activity-logs" class="btn-outline">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                    Logs de Actividad
+                </button>
                 <input type="file" id="csv-file-input" accept=".csv, text/csv, application/vnd.ms-excel, text/plain" class="hidden-file-input" aria-hidden="true">
                 
                 <button id="btn-clear-data" class="btn-danger-outline">
@@ -817,6 +880,190 @@
             </div>
             <div class="modal-footer" style="padding-top: 10px;">
                 <button class="btn-neutral" id="btn-mc-close" style="width: 100%;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Acceso a Espacio / Passphrase -->
+    <div id="modal-module-passphrase" class="modal-overlay">
+        <div class="modal-container" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 id="passphrase-modal-title">Acceso a Módulo</h3>
+                <button class="modal-close-btn" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Alerta de Bloqueo -->
+                <div id="passphrase-blocked-alert" class="alert-box danger-alert hidden-element" style="margin-bottom: 15px;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                    <span><strong>Acceso Restringido:</strong> Tu cuenta ha sido bloqueada para este módulo compartido por el usuario principal.</span>
+                </div>
+
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
+                    Selecciona un espacio guardado en tu cuenta de Google o introduce una Passphrase para acceder a una cuenta compartida.
+                </p>
+
+                <!-- Lista de Espacios Guardados -->
+                <div id="saved-workspaces-list" style="margin-bottom: 16px;">
+                    <!-- Inyectado dinámicamente -->
+                </div>
+
+                <!-- Formulario Nueva / Otra Passphrase -->
+                <form id="form-enter-passphrase" style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="passphrase-input" style="font-size: 9pt; font-weight: 600;">Ingresar Frase de Acceso (Passphrase)</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="password" id="passphrase-input" placeholder="Ej: iglesia2026, pareja123..." style="height: 40px; padding-right: 40px;">
+                            <button type="button" id="btn-toggle-passphrase-vis" style="position: absolute; right: 10px; background: transparent; border: none; color: var(--text-muted); cursor: pointer;" title="Ver u ocultar clave">
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary" style="height: 40px; margin-top: 6px;">
+                        <span>Acceder con Passphrase</span>
+                    </button>
+                </form>
+
+                <div style="text-align: center; margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border-color);">
+                    <button id="btn-passphrase-skip" class="btn-neutral" style="width: 100%;">
+                        🟢 Continuar a mi Cuenta Personal (Sin Passphrase)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Administrar Passphrase y Permisos de Integrantes -->
+    <div id="modal-manage-passphrase" class="modal-overlay">
+        <div class="modal-container" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3 id="mmp-modal-title">Configurar Passphrase y Permisos</h3>
+                <button class="modal-close-btn" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                <!-- Pestañas de Selección de Acción -->
+                <div style="display: flex; gap: 8px; margin-bottom: 14px; background: var(--input-bg); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <button type="button" id="mmp-tab-edit" style="flex: 1; padding: 8px; font-size: 0.83rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: var(--primary-color); color: white; transition: all 0.2s;">
+                        ✏️ Modificar Espacio Activo
+                    </button>
+                    <button type="button" id="mmp-tab-create" style="flex: 1; padding: 8px; font-size: 0.83rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.2s;">
+                        ➕ Crear un Nuevo Espacio
+                    </button>
+                </div>
+
+                <!-- Banner Informativo de Espacio Activo -->
+                <div id="mmp-active-space-info" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); padding: 12px 14px; border-radius: var(--radius-sm); margin-bottom: 14px;">
+                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
+                        <span>📍 Espacio Activo:</span>
+                        <span id="mmp-current-space-badge" style="color: var(--primary-color); font-weight: 700;">Cuenta Personal (Google)</span>
+                    </div>
+                    <p id="mmp-current-space-desc" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">
+                        Estás asignando o modificando el nombre/passphrase de tu espacio de trabajo actual.
+                    </p>
+                </div>
+
+                <!-- Sección 1: Datos del Espacio Actual / Nuevo -->
+                <div style="background-color: var(--input-bg); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+                    <h4 id="mmp-section-title" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; color: var(--text-color);">Configurar Nombre y Passphrase</h4>
+                    <p id="mmp-section-desc" style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Modifica los datos de este espacio. Si es tu espacio local, al ponerle passphrase podrás compartirlo.</p>
+                    
+                    <form id="mmp-space-form" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="mmp-space-name-input" style="font-size: 8.5pt; font-weight: 600;">Nombre del Espacio</label>
+                            <input type="text" id="mmp-space-name-input" placeholder="Ej: Tesorería Iglesia Principal" required style="height: 36px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="mmp-passphrase-input" style="font-size: 8.5pt; font-weight: 600;">Frase de Acceso (Passphrase)</label>
+                            <input type="text" id="mmp-passphrase-input" placeholder="Ej: iglesia2026" style="height: 36px;">
+                        </div>
+
+                        <!-- Opción de copiar datos actuales al crear nuevo espacio -->
+                        <div id="mmp-copy-local-container" style="display: none; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-color); margin-top: 2px;">
+                            <input type="checkbox" id="mmp-copy-local-check" style="width: 16px; height: 16px; cursor: pointer;">
+                            <label for="mmp-copy-local-check" style="cursor: pointer; user-select: none;">
+                                📦 Copiar mis datos actuales a este nuevo espacio (Desmarcar para iniciar en blanco)
+                            </label>
+                        </div>
+
+                        <button type="submit" id="mmp-space-submit-btn" class="btn-primary" style="height: 36px; width: 100%; margin-top: 4px;">💾 Guardar Cambios en mi Espacio Activo</button>
+                    </form>
+                </div>
+
+                <!-- Sección 2: Transferir Propiedad (Exclusivo Módulo de Tesorería) -->
+                <div id="mmp-transfer-section" style="background-color: rgba(168, 85, 247, 0.08); padding: 14px; border-radius: var(--radius-sm); border: 1px solid rgba(168, 85, 247, 0.25); margin-bottom: 20px;">
+                    <h4 id="mmp-transfer-title" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; color: #a855f7;">🔄 Transferir Propiedad del Módulo de Tesorería</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Traspasa todos los derechos de Usuario Principal a otro integrante. Si la persona no ha usado la app, escribe su correo de Google para dejar una transferencia pendiente.</p>
+                    
+                    <form id="mmp-transfer-form" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label id="mmp-transfer-label" for="mmp-new-owner-email" style="font-size: 8.5pt; font-weight: 600;">Correo de Google del Nuevo Tesorero Principal</label>
+                            <input type="email" id="mmp-new-owner-email" placeholder="Ej: nuevo.tesorero@gmail.com" required style="height: 36px;">
+                        </div>
+                        <button type="submit" class="btn-danger-outline" style="height: 36px; border-color: #a855f7; color: #a855f7;">Transferir Control de Propietario</button>
+                    </form>
+                </div>
+
+                <!-- Sección 3: Lista de Miembros y Permisos Individuales -->
+                <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; color: var(--text-color);">Integrantes Conectados y Permisos</h4>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Configura permisos de Solo Ver (Read Only), Agregar, Editar, Eliminar o Bloquea el acceso a cada correo individualmente.</p>
+                
+                <div class="members-table-container">
+                    <table class="members-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario / Correo</th>
+                                <th style="text-align: center;" title="Permiso para agregar registros">Agregar</th>
+                                <th style="text-align: center;" title="Permiso para editar registros">Editar</th>
+                                <th style="text-align: center;" title="Permiso para eliminar registros">Eliminar</th>
+                                <th style="text-align: center;" title="Solo Ver (Desactiva agregar, editar y eliminar)">Solo Ver</th>
+                                <th style="text-align: center;" title="Bloquear acceso total al espacio">Bloqueado</th>
+                                <th style="text-align: center;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mmp-members-tbody">
+                            <!-- Inyectado dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding-top: 10px;">
+                <button class="btn-neutral" id="btn-mmp-close" style="width: 100%;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Logs de Actividad -->
+    <div id="modal-activity-logs" class="modal-overlay">
+        <div class="modal-container" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>Logs de Actividad del Módulo</h3>
+                <button class="modal-close-btn" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 480px; overflow-y: auto;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    Historial cronológico de modificaciones (Crear, Editar, Eliminar y Cambios de Administración) registradas en este espacio.
+                </p>
+                
+                <div class="logs-table-container">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha y Hora</th>
+                                <th>Usuario</th>
+                                <th>Acción</th>
+                                <th>Detalle</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                            <!-- Inyectado dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-neutral" id="btn-logs-close" style="width: 100%;">Cerrar</button>
             </div>
         </div>
     </div>

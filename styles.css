@@ -2482,3 +2482,166 @@ html.dark .module-indicator {
         padding: 8px !important;
     }
 }
+
+/* ==========================================
+   --- FUNCIONALIDAD PASSPHRASE & ESPACIOS ---
+   ========================================== */
+
+.space-badge-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.space-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    border: 1px solid rgba(79, 70, 229, 0.2);
+    transition: var(--transition);
+}
+
+.space-badge.space-shared {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.space-switcher-btn {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition);
+}
+
+.space-switcher-btn:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--primary-color);
+}
+
+/* Estilos de Tablas de Logs y Miembros */
+.logs-table-container, .members-table-container {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+}
+
+.logs-table, .members-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.logs-table th, .members-table th {
+    padding: 10px 14px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.logs-table td, .members-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+    vertical-align: middle;
+}
+
+.logs-table tr:last-child td, .members-table tr:last-child td {
+    border-bottom: none;
+}
+
+.logs-table tr:hover, .members-table tr:hover {
+    background-color: var(--bg-hover);
+}
+
+/* Insignias de Acciones de Logs */
+.badge-action {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-action-crear {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.badge-action-editar {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+
+.badge-action-eliminar {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.badge-action-transferir {
+    background-color: rgba(168, 85, 247, 0.15);
+    color: #a855f7;
+}
+
+/* Tarjetas de Selección de Espacios en Modal */
+.workspace-option-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--card-bg);
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 8px;
+}
+
+.workspace-option-card:hover {
+    border-color: var(--primary-color);
+    background-color: var(--bg-hover);
+    transform: translateY(-1px);
+}
+
+.workspace-option-card.active {
+    border-color: var(--primary-color);
+    background-color: var(--primary-light);
+}
+
+html.dark .workspace-option-card.active {
+    background-color: rgba(79, 70, 229, 0.15);
+}
+
+.workspace-info h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+    color: var(--text-color);
+}
+
+.workspace-info p {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0;
+}
