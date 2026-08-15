@@ -1138,6 +1138,8 @@ async function saveTransactions() {
                 await setDoc(userDocRef, {
                     transactions: transactions,
                     treasuryCategories: treasuryCategories,
+                    treasuryLogs: activeTreasurySpace.logs || [],
+                    logs: activeTreasurySpace.logs || [],
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
             }
@@ -1285,9 +1287,15 @@ async function setupSpaceListener(moduleName) {
                     if (data.treasuryCategories && Array.isArray(data.treasuryCategories)) {
                         treasuryCategories = data.treasuryCategories;
                     }
+                    if (data.treasuryLogs && Array.isArray(data.treasuryLogs)) {
+                        activeTreasurySpace.logs = data.treasuryLogs;
+                    } else if (data.logs && Array.isArray(data.logs)) {
+                        activeTreasurySpace.logs = data.logs;
+                    }
                     if (data.savedWorkspaces) userSavedWorkspaces = data.savedWorkspaces;
                     localStorage.setItem('transacciones', JSON.stringify(transactions));
                     localStorage.setItem('treasury_categories', JSON.stringify(treasuryCategories));
+                    localStorage.setItem('treasury_logs', JSON.stringify(activeTreasurySpace.logs || []));
                 } else {
                     if (transactions.length > 0) {
                         saveTransactions();
@@ -1295,6 +1303,7 @@ async function setupSpaceListener(moduleName) {
                 }
                 updateSpaceBadgeUI('tesoreria');
                 render();
+                renderAuditLogsModal('tesoreria');
             }, (error) => {
                 console.error("Error en Snapshot Tesoreria:", error);
             });
@@ -1466,11 +1475,17 @@ async function setupSpaceListener(moduleName) {
                     if (data.personalCategories && Array.isArray(data.personalCategories)) {
                         personalCategories = data.personalCategories;
                     }
+                    if (data.personalLogs && Array.isArray(data.personalLogs)) {
+                        activePersonalSpace.logs = data.personalLogs;
+                    } else if (data.logs && Array.isArray(data.logs)) {
+                        activePersonalSpace.logs = data.logs;
+                    }
                     if (data.savedWorkspaces) userSavedWorkspaces = data.savedWorkspaces;
                     
                     localStorage.setItem('pf_expenses', JSON.stringify(personalExpenses));
                     localStorage.setItem('pf_incomes', JSON.stringify(personalIncomes));
                     localStorage.setItem('personal_categories', JSON.stringify(personalCategories));
+                    localStorage.setItem('pf_logs', JSON.stringify(activePersonalSpace.logs || []));
                 } else {
                     if (personalExpenses.length > 0 || Object.keys(personalIncomes).length > 0) {
                         savePersonalFinances();
@@ -1479,6 +1494,7 @@ async function setupSpaceListener(moduleName) {
                 updateSpaceBadgeUI('personales');
                 initPfFilters();
                 renderPersonalFinances();
+                renderAuditLogsModal('personales');
             }, (error) => {
                 console.error("Error en Snapshot Finanzas Personales:", error);
             });
@@ -1643,6 +1659,8 @@ async function savePersonalFinances() {
                     personalExpenses: personalExpenses,
                     personalIncomes: personalIncomes,
                     personalCategories: personalCategories,
+                    personalLogs: activePersonalSpace.logs || [],
+                    logs: activePersonalSpace.logs || [],
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
             }
