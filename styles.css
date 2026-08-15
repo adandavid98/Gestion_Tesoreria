@@ -2644,4 +2644,27 @@ html.dark .workspace-option-card.active {
     font-size: 0.78rem;
     color: var(--text-muted);
     margin: 0;
+}
+
+.btn-delete-saved-space {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.btn-delete-saved-space:hover {
+    background-color: rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+    color: #dc2626;
+    transform: scale(1.05);
 }

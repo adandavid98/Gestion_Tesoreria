@@ -1,6 +1,6 @@
 import { firebaseConfig } from './config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Inicializar Firebase
@@ -11,9 +11,9 @@ const db = getFirestore(app);
 // Habilitar persistencia offline en Firestore
 enableIndexedDbPersistence(db).catch((err) => {
     if (err.code == 'failed-precondition') {
-        console.warn('La persistencia offline de Firestore falló: Múltiples pestañas abiertas.');
+        console.warn('La persistencia offline de Firestore fallo: Multiples pestanas abiertas.');
     } else if (err.code == 'unimplemented') {
-        console.warn('Este navegador o entorno móvil no soporta persistencia offline de Firestore.');
+        console.warn('Este navegador o entorno movil no soporta persistencia offline de Firestore.');
     }
 });
 
@@ -22,7 +22,25 @@ googleProvider.setCustomParameters({
     prompt: 'select_account'
 });
 
-// --- ESTADO DE LA APLICACIÓN ---
+// Capturar resultado de inicio de sesion por redireccion si se uso como fallback
+getRedirectResult(auth).then((result) => {
+    if (result && result.user) {
+        console.log("Sesion iniciada por redireccion exitosa:", result.user.email);
+    }
+}).catch((error) => {
+    console.error("Error en getRedirectResult:", error);
+    if (error.code === 'auth/unauthorized-domain') {
+        alert('Dominio no autorizado: ' + window.location.hostname + '. Agrega este dominio en Firebase Console > Authentication > Authorized domains.');
+    }
+});
+
+// --- ESTADO DE LA APLICACIoN ---
+const DEFAULT_GEMINI_KEY = "";
+let copilotMessages = [];
+const LANG_NAMES = {
+    es: 'Espanol', en: 'English', fr: 'Francais',
+    pt: 'Portuguas', it: 'Italiano', de: 'Deutsch'
+};
 let transactions = [];
 let currentUser = null;
 let selectedTransactionIdToDelete = null;
@@ -81,7 +99,7 @@ async function hashPassphrase(moduleName, passphrase) {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Registrar Eventos en el Log de Auditoría
+// Registrar Eventos en el Log de Auditoria
 async function addAuditLog(moduleName, action, details) {
     const timestamp = new Date().toLocaleString();
     const userEmail = currentUser ? currentUser.email : 'Usuario Local';
@@ -112,35 +130,27 @@ async function addAuditLog(moduleName, action, details) {
 
 // Actualizar Insignia del Espacio Activo
 function updateSpaceBadgeUI(moduleName) {
-    if (moduleName === 'tesoreria') {
-        const badge = document.getElementById('t-space-badge');
-        const nameEl = document.getElementById('t-space-name');
-        if (badge && nameEl) {
-            if (activeTreasurySpace.hash) {
-                badge.className = 'space-badge space-shared';
-                badge.querySelector('.space-icon').textContent = '👥';
-                const readOnlyLabel = activeTreasurySpace.permissions.isReadOnly ? ' (👁️ Solo Ver)' : '';
-                nameEl.textContent = (activeTreasurySpace.spaceName || 'Espacio Compartido') + readOnlyLabel;
-            } else {
-                badge.className = 'space-badge';
-                badge.querySelector('.space-icon').textContent = '🟢';
-                nameEl.textContent = activeTreasurySpace.spaceName || 'Cuenta Personal (Google)';
+    const isTreasury = moduleName === 'tesoreria';
+    const badge = document.getElementById(isTreasury ? 't-space-badge' : 'pf-space-badge');
+    const nameEl = document.getElementById(isTreasury ? 't-space-name' : 'pf-space-name');
+    const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
+
+    if (badge && nameEl) {
+        const iconEl = badge.querySelector('.space-icon');
+        if (activeSpace.hash) {
+            badge.className = 'space-badge space-shared';
+            if (iconEl) {
+                iconEl.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
             }
-        }
-    } else {
-        const badge = document.getElementById('pf-space-badge');
-        const nameEl = document.getElementById('pf-space-name');
-        if (badge && nameEl) {
-            if (activePersonalSpace.hash) {
-                badge.className = 'space-badge space-shared';
-                badge.querySelector('.space-icon').textContent = '👥';
-                const readOnlyLabel = activePersonalSpace.permissions.isReadOnly ? ' (👁️ Solo Ver)' : '';
-                nameEl.textContent = (activePersonalSpace.spaceName || 'Espacio Compartido') + readOnlyLabel;
-            } else {
-                badge.className = 'space-badge';
-                badge.querySelector('.space-icon').textContent = '🟢';
-                nameEl.textContent = activePersonalSpace.spaceName || 'Cuenta Personal (Google)';
+            const isStrictlyReadOnly = !activeSpace.isOwner && activeSpace.permissions && activeSpace.permissions.isReadOnly && !activeSpace.permissions.allowAdd;
+            const readOnlyLabel = isStrictlyReadOnly ? ' (Solo Ver)' : '';
+            nameEl.textContent = (activeSpace.spaceName || 'Espacio Compartido') + readOnlyLabel;
+        } else {
+            badge.className = 'space-badge';
+            if (iconEl) {
+                iconEl.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
             }
+            nameEl.textContent = activeSpace.spaceName || 'Cuenta Personal';
         }
     }
 }
@@ -153,7 +163,7 @@ function updateModulePermissionUI(moduleName) {
         const btnClear = document.getElementById('btn-clear-data');
         const submitBtn = document.querySelector('#transaction-form button[type="submit"]');
         const isOwner = activeTreasurySpace.isOwner || !activeTreasurySpace.hash;
-        const allowAdd = activeTreasurySpace.permissions.allowAdd !== false && !activeTreasurySpace.permissions.isReadOnly;
+        const allowAdd = isOwner || (activeTreasurySpace.permissions.allowAdd !== false && !activeTreasurySpace.permissions.isReadOnly);
 
         if (btnConfig) btnConfig.style.display = isOwner ? 'inline-flex' : 'none';
         if (btnImport) btnImport.style.display = isOwner ? 'inline-flex' : 'none';
@@ -171,7 +181,7 @@ function updateModulePermissionUI(moduleName) {
         const btnClear = document.getElementById('btn-pf-clear-data');
         const submitBtn = document.querySelector('#pf-expense-form button[type="submit"]');
         const isOwner = activePersonalSpace.isOwner || !activePersonalSpace.hash;
-        const allowAdd = activePersonalSpace.permissions.allowAdd !== false && !activePersonalSpace.permissions.isReadOnly;
+        const allowAdd = isOwner || (activePersonalSpace.permissions.allowAdd !== false && !activePersonalSpace.permissions.isReadOnly);
 
         if (btnConfig) btnConfig.style.display = isOwner ? 'inline-flex' : 'none';
         if (btnImport) btnImport.style.display = isOwner ? 'inline-flex' : 'none';
@@ -202,8 +212,8 @@ async function saveSavedWorkspacesToUser() {
 const DEFAULT_TREASURY_CATEGORIES = [
     { name: "Ofrenda", color: "#10b981" },
     { name: "Diezmo", color: "#059669" },
-    { name: "Donación", color: "#0d9488" },
-    { name: "ConstrucciÓn", color: "#d97706" },
+    { name: "Donacion", color: "#0d9488" },
+    { name: "Construccion", color: "#d97706" },
     { name: "Sonido / Multimedia", color: "#4f46e5" },
     { name: "Evangelismo", color: "#7c3aed" },
     { name: "Servicios (Agua/Luz)", color: "#dc2626" },
@@ -230,24 +240,24 @@ let tDonutChartInstance = null;
 let tBarChartInstance = null;
 
 const DEFAULT_CONCEPT_CATEGORIES = [
-    { concepto: "Ofrenda de jóvenes", categoria: "Ofrenda" },
+    { concepto: "Ofrenda de jovenes", categoria: "Ofrenda" },
     { concepto: "Ofrenda dominical", categoria: "Ofrenda" },
     { concepto: "Ofrenda especial", categoria: "Ofrenda" },
-    { concepto: "Donación", categoria: "Donaciones" },
+    { concepto: "Donacion", categoria: "Donaciones" },
     { concepto: "Diezmo", categoria: "Diezmos" },
-    { concepto: "Compra de micrófonos", categoria: "Equipo de sonido" },
+    { concepto: "Compra de microfonos", categoria: "Equipo de sonido" },
     { concepto: "Compra de cables", categoria: "Equipo de sonido" },
     { concepto: "Alquiler de local", categoria: "Alquiler" },
-    { concepto: "Refrigerio para reunión", categoria: "Refrigerios" },
-    { concepto: "Pizza reunión", categoria: "Refrigerios" },
+    { concepto: "Refrigerio para reunion", categoria: "Refrigerios" },
+    { concepto: "Pizza reunion", categoria: "Refrigerios" },
     { concepto: "Refrescos y vasos", categoria: "Refrigerios" },
-    { concepto: "Impresión de folletos", categoria: "Papelería" },
-    { concepto: "Fotocopias e impresiones", categoria: "Papelería" },
+    { concepto: "Impresion de folletos", categoria: "Papeleria" },
+    { concepto: "Fotocopias e impresiones", categoria: "Papeleria" },
     { concepto: "Gasolina transporte", categoria: "Transporte" },
-    { concepto: "Alquiler de autobús", categoria: "Transporte" },
-    { concepto: "Inscripción campamento", categoria: "Campamento" },
+    { concepto: "Alquiler de autobus", categoria: "Transporte" },
+    { concepto: "Inscripcion campamento", categoria: "Campamento" },
     { concepto: "Materiales de escuela dominical", categoria: "Escuela dominical" },
-    { concepto: "Artículos de limpieza", categoria: "Mantenimiento" }
+    { concepto: "Articulos de limpieza", categoria: "Mantenimiento" }
 ];
 
 const KEYWORD_CATEGORY_RULES = [
@@ -255,10 +265,10 @@ const KEYWORD_CATEGORY_RULES = [
     { keywords: ["microfono", "cable", "sonido", "audio", "bocina", "consola", "parlante", "audifono", "parlantes"], categoria: "Equipo de sonido" },
     { keywords: ["alquiler", "renta", "local", "salon", "sillas", "mesa", "mesas"], categoria: "Alquiler" },
     { keywords: ["refrigerio", "pizza", "refresco", "comida", "vasos", "platos", "cena", "almuerzo", "pan", "pastel", "gaseosa"], categoria: "Refrigerios" },
-    { keywords: ["impresion", "fotocopia", "folleto", "papel", "cuaderno", "lapicero", "tinta", "lapiz", "hoja", "hojas"], categoria: "Papelería" },
+    { keywords: ["impresion", "fotocopia", "folleto", "papel", "cuaderno", "lapicero", "tinta", "lapiz", "hoja", "hojas"], categoria: "Papeleria" },
     { keywords: ["gasolina", "transporte", "autobus", "pasaje", "viaje", "taxi", "combustible", "flete", "peaje"], categoria: "Transporte" },
     { keywords: ["campamento", "retiro", "inscripcion", "evento", "conferencia"], categoria: "Campamento" },
-    { keywords: ["niños", "escuela dominical", "didactico", "juguetes", "clase", "materiales"], categoria: "Escuela dominical" },
+    { keywords: ["ninos", "escuela dominical", "didactico", "juguetes", "clase", "materiales"], categoria: "Escuela dominical" },
     { keywords: ["limpieza", "mantenimiento", "escoba", "jabon", "reparacion", "pintura", "desinfectante", "cloro"], categoria: "Mantenimiento" }
 ];
 
@@ -270,17 +280,17 @@ const DEFAULT_PF_CONCEPT_CATEGORIES = [
     { concepto: "Factura de Agua", categoria: "Electricidad / Agua" },
     { concepto: "Factura de Basura", categoria: "Electricidad / Agua" },
     { concepto: "Compra de Gasolina", categoria: "Gasolina / Transporte" },
-    { concepto: "Pasaje de Autobús / Metro", categoria: "Gasolina / Transporte" },
+    { concepto: "Pasaje de Autobus / Metro", categoria: "Gasolina / Transporte" },
     { concepto: "Pago de Uber / Taxi", categoria: "Gasolina / Transporte" },
     { concepto: "Compra en Supermercado", categoria: "Supermercado / Comida" },
     { concepto: "Cena Familiar / Salida a Comer", categoria: "Supermercado / Comida" },
     { concepto: "Almuerzo Diario", categoria: "Supermercado / Comida" },
     { concepto: "Salida al Cine", categoria: "Salidas / Entretenimiento" },
     { concepto: "Salida con amigos", categoria: "Salidas / Entretenimiento" },
-    { concepto: "Suscripción de Netflix", categoria: "Suscripciones" },
-    { concepto: "Suscripción de Spotify", categoria: "Suscripciones" },
-    { concepto: "Suscripción de Youtube Premium", categoria: "Suscripciones" },
-    { concepto: "Consulta Médica", categoria: "Salud / Medicinas" },
+    { concepto: "Suscripcion de Netflix", categoria: "Suscripciones" },
+    { concepto: "Suscripcion de Spotify", categoria: "Suscripciones" },
+    { concepto: "Suscripcion de Youtube Premium", categoria: "Suscripciones" },
+    { concepto: "Consulta Medica", categoria: "Salud / Medicinas" },
     { concepto: "Compra de Medicinas en Farmacia", categoria: "Salud / Medicinas" }
 ];
 
@@ -335,7 +345,7 @@ const pfFilterYear = document.getElementById('pf-filter-year');
 const pfCategory = document.getElementById('pf-category');
 const pfAutocompleteList = document.getElementById('pf-autocomplete-list');
 
-// Elementos de Configuración de Categorías
+// Elementos de Configuracion de Categorias
 const btnTManageCategories = document.getElementById('btn-t-manage-categories');
 const btnPfManageCategories = document.getElementById('btn-pf-manage-categories');
 const modalManageCategories = document.getElementById('modal-manage-categories');
@@ -410,29 +420,53 @@ const modalPfClear = document.getElementById('modal-pf-clear');
 const btnPfClearCancel = document.getElementById('btn-pf-clear-cancel');
 const btnPfClearConfirm = document.getElementById('btn-pf-clear-confirm');
 
-// --- INICIALIZACIÓN ---
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Configurar selector de fecha (valor por defecto: hoy, max: hoy)
-    const todayStr = getTodayString();
-    inputDate.value = todayStr;
-    inputDate.max = todayStr;
-    
-    if (pfDate) {
-        pfDate.value = todayStr;
-        pfDate.max = todayStr;
-    }
-    
-    // 2. Configurar manejadores de eventos
-    setupEventListeners();
-    
-    // 3. Inicializar selector de idioma personalizado
-    initCustomLanguageSelector();
-    
-    // 4. Inicializar Copilot de Finanzas
-    initCopilot();
-});
+// --- INICIALIZACIoN ---
+function initApp() {
+    try {
+        // 1. Configurar selector de fecha (valor por defecto: hoy, max: hoy)
+        const todayStr = getTodayString();
+        if (inputDate) {
+            inputDate.value = todayStr;
+            inputDate.max = todayStr;
+        }
+        
+        if (pfDate) {
+            pfDate.value = todayStr;
+            pfDate.max = todayStr;
+        }
 
-// --- ESCUCHAR ESTADO DE AUTENTICACIÓN ---
+        // 2. Inicializar filtros de fecha y periodo
+        if (typeof initFilters === 'function') {
+            initFilters();
+        }
+        if (typeof initPfFilters === 'function') {
+            initPfFilters();
+        }
+        
+        // 3. Configurar manejadores de eventos
+        setupEventListeners();
+        
+        // 4. Inicializar selector de idioma personalizado
+        if (typeof initCustomLanguageSelector === 'function') {
+            initCustomLanguageSelector();
+        }
+        
+        // 5. Inicializar Copilot de Finanzas
+        if (typeof initCopilot === 'function') {
+            initCopilot();
+        }
+    } catch (err) {
+        console.error("Error en initApp:", err);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
+
+// --- ESCUCHAR ESTADO DE AUTENTICACIoN ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
@@ -452,7 +486,7 @@ onAuthStateChanged(auth, async (user) => {
         try {
             await loadTransactions();
         } catch (e) {
-            console.error("Error al cargar Tesorería:", e);
+            console.error("Error al cargar Tesoreria:", e);
         }
         
         try {
@@ -467,7 +501,7 @@ onAuthStateChanged(auth, async (user) => {
             console.error("Error al inicializar filtros:", e);
         }
         
-        // Mostrar módulo activo (por defecto: 'menu')
+        // Mostrar modulo activo (por defecto: 'menu')
         showModule(currentModule);
         
         try {
@@ -483,7 +517,7 @@ onAuthStateChanged(auth, async (user) => {
         treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
         personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
         
-        // Destruir gráficos
+        // Destruir gr!ficos
         if (pfDonutChartInstance) { pfDonutChartInstance.destroy(); pfDonutChartInstance = null; }
         if (pfBarChartInstance) { pfBarChartInstance.destroy(); pfBarChartInstance = null; }
         if (tDonutChartInstance) { tDonutChartInstance.destroy(); tDonutChartInstance = null; }
@@ -499,7 +533,7 @@ onAuthStateChanged(auth, async (user) => {
         // Ocultar perfil
         if (userProfile) userProfile.classList.add('hidden-element');
         
-        // Mostrar login, ocultar todo lo demás
+        // Mostrar login, ocultar todo lo dem!s
         loginSection.classList.remove('hidden-element');
         dashboardContainer.classList.add('hidden-element');
         menuSection.classList.add('hidden-element');
@@ -513,23 +547,23 @@ onAuthStateChanged(auth, async (user) => {
 
 function cleanTextEncoding(str) {
     if (!str || typeof str !== 'string') return str;
-    return str.replace(/\u00C3\u00B3/g, 'ó')
-              .replace(/\u00C3\u00AD/g, 'í')
-              .replace(/\u00C3\u00BA/g, 'ú')
-              .replace(/\u00C3\u00A1/g, 'á')
-              .replace(/\u00C3\u00A9/g, 'é')
-              .replace(/\u00C3\u00B1/g, 'ñ')
-              .replace(/\u00C3\u0091/g, 'Ñ')
-              .replace(/\u00C3\u009A/g, 'Ú')
-              .replace(/\u00C3\u0093/g, 'Ó')
-              .replace(/\u00C2\u00BF/g, '¿')
-              .replace(/\u00C2\u00A1/g, '¡');
+    return str.replace(/\u00C3\u00B3/g, 'o')
+              .replace(/\u00C3\u00AD/g, 'i')
+              .replace(/\u00C3\u00BA/g, 'u')
+              .replace(/\u00C3\u00A1/g, '!')
+              .replace(/\u00C3\u00A9/g, 'e')
+              .replace(/\u00C3\u00B1/g, 'n')
+              .replace(/\u00C3\u0091/g, 'i')
+              .replace(/\u00C3\u009A/g, 'u')
+              .replace(/\u00C3\u0093/g, 'o')
+              .replace(/\u00C2\u00BF/g, '?')
+              .replace(/\u00C2\u00A1/g, '!');
 }
 
 async function migrateDataEncoding() {
     let modified = false;
 
-    // 1. Limpiar categorías personales
+    // 1. Limpiar categorias personales
     if (personalCategories && Array.isArray(personalCategories)) {
         personalCategories = personalCategories.map(cat => {
             const cleanName = cleanTextEncoding(cat.name);
@@ -541,7 +575,7 @@ async function migrateDataEncoding() {
         });
     }
 
-    // 2. Limpiar categorías de tesorería
+    // 2. Limpiar categorias de tesoreria
     if (treasuryCategories && Array.isArray(treasuryCategories)) {
         treasuryCategories = treasuryCategories.map(cat => {
             const cleanName = cleanTextEncoding(cat.name);
@@ -553,7 +587,7 @@ async function migrateDataEncoding() {
         });
     }
 
-    // 3. Limpiar transacciones de tesorería
+    // 3. Limpiar transacciones de tesoreria
     if (transactions && Array.isArray(transactions)) {
         transactions = transactions.map(t => {
             const cleanCat = cleanTextEncoding(t.categoria);
@@ -582,17 +616,17 @@ async function migrateDataEncoding() {
     }
 
     if (modified) {
-        console.warn("Se detectó y reparó codificación de texto dañada en los datos almacenados.");
+        console.warn("Se detecto y reparo codificacion de texto danada en los datos almacenados.");
         try {
             await saveTransactions();
             await savePersonalFinances();
         } catch (err) {
-            console.error("Error al guardar migración de codificación: ", err);
+            console.error("Error al guardar migracion de codificacion: ", err);
         }
     }
 }
 
-// --- FUNCIONES DE MODALES Y GESTIÓN DE ESPACIOS ---
+// --- FUNCIONES DE MODALES Y GESTIoN DE ESPACIOS ---
 
 let currentPassphraseIsSwitching = false;
 
@@ -605,16 +639,27 @@ function openPassphraseModal(moduleName, isSwitchingSpace = false) {
     const inputPass = document.getElementById('passphrase-input');
     const blockedAlert = document.getElementById('passphrase-blocked-alert');
     const btnSkip = document.getElementById('btn-passphrase-skip');
+    const btnReturnLocal = document.getElementById('btn-return-local-space');
+    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
 
-    if (title) title.textContent = moduleName === 'tesoreria' ? 'Acceso a Tesorería' : 'Acceso a Finanzas Personales';
+    if (title) title.textContent = moduleName === 'tesoreria' ? 'Acceso a Tesoreria' : 'Acceso a Finanzas Personales';
     if (inputPass) inputPass.value = '';
     if (blockedAlert) blockedAlert.classList.add('hidden-element');
+
+    if (btnReturnLocal) {
+        if (activeSpace.hash && isSwitchingSpace) {
+            btnReturnLocal.style.display = 'block';
+            btnReturnLocal.innerHTML = 'Volver a mi cuenta local';
+        } else {
+            btnReturnLocal.style.display = 'none';
+        }
+    }
 
     if (btnSkip) {
         if (isSwitchingSpace) {
             btnSkip.innerHTML = 'Cerrar';
         } else {
-            btnSkip.innerHTML = '🟢 Continuar a mi Cuenta Personal (Sin Passphrase)';
+            btnSkip.innerHTML = ' Continuar a mi Cuenta Personal (Sin Passphrase)';
         }
     }
 
@@ -645,46 +690,144 @@ function renderSavedWorkspacesList() {
         const safeName = ws.name ? ws.name.replace(/'/g, "\\'") : 'Espacio Compartido';
         const safePass = ws.passphrase ? ws.passphrase.replace(/'/g, "\\'") : '';
         html += `
-            <div class="workspace-option-card ${isActive ? 'active' : ''}" onclick="selectSavedWorkspace('${currentPassphraseModalModule}', '${ws.hash}', '${safeName}', '${safePass}')">
-                <div class="workspace-info">
-                    <h4>👥 ${ws.name || 'Espacio Compartido'}</h4>
-                    <p>Passphrase: ****${ws.passphrase ? ws.passphrase.slice(-3) : ''}</p>
+            <div class="workspace-option-card ${isActive ? 'active' : ''}" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 12px 14px; border-radius: 8px; margin-bottom: 8px; transition: all 0.2s;" onclick="selectSavedWorkspace('${currentPassphraseModalModule}', '${ws.hash}', '${safeName}', '${safePass}')">
+                <div class="workspace-info" style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-color);">${ws.name || 'Espacio Compartido'}</h4>
+                    </div>
+                    <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted); padding-left: 22px;">Passphrase: ****${ws.passphrase ? ws.passphrase.slice(-3) : ''}</p>
                 </div>
-                ${isActive ? '<span style="color:#10b981; font-weight:700;">✓ Activo</span>' : '<span style="font-size:0.8rem; color:var(--primary-color);">Conectar →</span>'}
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    ${isActive ? 
+                        '<span style="display: inline-flex; align-items: center; gap: 5px; color: #10b981; font-weight: 600; font-size: 0.8rem; background: rgba(16, 185, 129, 0.12); padding: 4px 10px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.3);"><span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 5px #10b981;"></span> Activo</span>' : 
+                        '<span style="font-size: 0.82rem; color: var(--primary-color); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">Conectar <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></span>'
+                    }
+                    <button type="button" class="btn-delete-saved-space" title="Eliminar de mis accesos guardados" onclick="event.stopPropagation(); deleteSavedWorkspace('${currentPassphraseModalModule}', '${ws.hash}')" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #ef4444; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'; this.style.borderColor='#ef4444'" onmouseout="this.style.background='rgba(239, 68, 68, 0.12)'; this.style.borderColor='rgba(239, 68, 68, 0.25)'" aria-label="Eliminar espacio guardado">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                    </button>
+                </div>
             </div>
         `;
     });
     listContainer.innerHTML = html;
 }
 
-window.selectSavedWorkspace = async function(moduleName, hash, name, passphrase) {
-    if (moduleName === 'tesoreria') {
+window.deleteSavedWorkspace = async function(moduleName, hash) {
+    if (!confirm('¿Deseas eliminar este espacio de tu lista de accesos guardados?')) return;
+    const list = userSavedWorkspaces[moduleName] || [];
+    userSavedWorkspaces[moduleName] = list.filter(w => w.hash !== hash);
+    await saveSavedWorkspacesToUser();
+    
+    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+    if (activeSpace.hash === hash) {
+        await disconnectActiveSpace(moduleName);
+    } else {
+        renderSavedWorkspacesList();
+    }
+    showToast('Espacio eliminado de tus accesos guardados.', 'info');
+};
+
+async function disconnectActiveSpace(moduleName) {
+    const isTreasury = moduleName === 'tesoreria';
+    if (isTreasury) {
+        if (treasuryUnsubscribe) { treasuryUnsubscribe(); treasuryUnsubscribe = null; }
         activeTreasurySpace = {
-            passphrase,
-            hash,
-            spaceName: name || 'Espacio Compartido',
-            isOwner: false,
-            permissions: { allowEdit: false, allowDelete: false },
+            passphrase: localStorage.getItem('treasury_passphrase') || '',
+            hash: '',
+            spaceName: localStorage.getItem('treasury_space_name') || 'Cuenta Personal',
+            isOwner: true,
+            permissions: { allowEdit: true, allowDelete: true },
             isBlocked: false,
             members: {},
             logs: []
         };
         await setupSpaceListener('tesoreria');
+        updateSpaceBadgeUI('tesoreria');
+        updateModulePermissionUI('tesoreria');
     } else {
+        if (personalUnsubscribe) { personalUnsubscribe(); personalUnsubscribe = null; }
         activePersonalSpace = {
-            passphrase,
-            hash,
-            spaceName: name || 'Espacio Compartido',
-            isOwner: false,
-            permissions: { allowEdit: false, allowDelete: false },
+            passphrase: localStorage.getItem('personal_passphrase') || '',
+            hash: '',
+            spaceName: localStorage.getItem('personal_space_name') || 'Cuenta Personal',
+            isOwner: true,
+            permissions: { allowEdit: true, allowDelete: true },
             isBlocked: false,
             members: {},
             logs: []
         };
         await setupSpaceListener('personales');
+        updateSpaceBadgeUI('personales');
+        updateModulePermissionUI('personales');
+        renderPersonalFinances();
+    }
+    const mmpModal = document.getElementById('modal-manage-passphrase');
+    if (mmpModal) closeModal(mmpModal);
+    closePassphraseModal();
+    renderSavedWorkspacesList();
+    showToast('Has vuelto a tu Cuenta Local privada.', 'info');
+}
+
+window.selectSavedWorkspace = async function(moduleName, hash, name, passphrase) {
+    const isTreasury = moduleName === 'tesoreria';
+    const savedList = userSavedWorkspaces[moduleName] || [];
+    const savedItem = savedList.find(w => w.hash === hash);
+    const effectiveUser = currentUser || auth.currentUser;
+    const isLocallyOwned = localStorage.getItem('owned_space_' + hash) === 'true';
+    const isSavedOwner = savedItem ? (savedItem.isOwner !== false) : false;
+    const isOwner = isLocallyOwned || isSavedOwner || (savedItem && (savedItem.isOwner === true || (savedItem.ownerUid && effectiveUser && savedItem.ownerUid === effectiveUser.uid)));
+
+    if (isTreasury) {
+        if (treasuryUnsubscribe) { treasuryUnsubscribe(); treasuryUnsubscribe = null; }
+        activeTreasurySpace = {
+            passphrase: passphrase || (savedItem ? savedItem.passphrase : ''),
+            hash,
+            spaceName: name || (savedItem ? savedItem.name : 'Espacio Compartido'),
+            isOwner: isOwner,
+            permissions: isOwner 
+                ? { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false } 
+                : { allowAdd: true, allowEdit: false, allowDelete: false, isReadOnly: false },
+            isBlocked: false,
+            members: {},
+            logs: []
+        };
+        await setupSpaceListener('tesoreria');
+        updateSpaceBadgeUI('tesoreria');
+        updateModulePermissionUI('tesoreria');
+        render();
+    } else {
+        if (personalUnsubscribe) { personalUnsubscribe(); personalUnsubscribe = null; }
+        activePersonalSpace = {
+            passphrase: passphrase || (savedItem ? savedItem.passphrase : ''),
+            hash,
+            spaceName: name || (savedItem ? savedItem.name : 'Espacio Compartido'),
+            isOwner: isOwner,
+            permissions: isOwner 
+                ? { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false } 
+                : { allowAdd: true, allowEdit: false, allowDelete: false, isReadOnly: false },
+            isBlocked: false,
+            members: {},
+            logs: []
+        };
+        await setupSpaceListener('personales');
+        updateSpaceBadgeUI('personales');
+        updateModulePermissionUI('personales');
+        renderPersonalFinances();
     }
     closePassphraseModal();
     showModule(moduleName);
+    showToast(`Conectado al espacio '${name}'`, 'success');
 };
 
 let currentMmpMode = 'edit';
@@ -699,7 +842,10 @@ function setMmpMode(mode) {
     const submitBtn = document.getElementById('mmp-space-submit-btn');
     const inputName = document.getElementById('mmp-space-name-input');
     const inputPass = document.getElementById('mmp-passphrase-input');
-    const activeSpace = currentManagePassphraseModule === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+    const disconnectContainer = document.getElementById('mmp-disconnect-container');
+    const disconnectBtn = document.getElementById('btn-mmp-disconnect');
+    const isTreasury = currentManagePassphraseModule === 'tesoreria';
+    const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
 
     if (mode === 'edit') {
         if (tabEdit) {
@@ -713,11 +859,31 @@ function setMmpMode(mode) {
         if (sectionTitle) sectionTitle.textContent = 'Configurar Nombre y Passphrase';
         if (sectionDesc) sectionDesc.textContent = 'Modifica los datos de este espacio activo. Al cambiar el nombre o clave se actualizarán para todos.';
         if (copyContainer) copyContainer.style.display = 'none';
-        if (submitBtn) submitBtn.textContent = '💾 Guardar Cambios en mi Espacio Activo';
+        if (submitBtn) submitBtn.textContent = 'Guardar Cambios en mi Espacio Activo';
 
-        const defaultName = activeSpace.hash ? 'Espacio Compartido' : 'Cuenta Personal (Google)';
-        if (inputName) inputName.value = activeSpace.spaceName || defaultName;
-        if (inputPass) inputPass.value = activeSpace.passphrase || '';
+        const savedLocalName = isTreasury ? localStorage.getItem('treasury_space_name') : localStorage.getItem('personal_space_name');
+        const savedLocalPass = isTreasury ? localStorage.getItem('treasury_passphrase') : localStorage.getItem('personal_passphrase');
+
+        if (inputName) inputName.value = activeSpace.spaceName || savedLocalName || 'Cuenta Personal';
+        if (inputPass) inputPass.value = activeSpace.passphrase || savedLocalPass || '';
+
+        if (disconnectContainer && disconnectBtn) {
+            if (activeSpace.hash) {
+                disconnectContainer.style.display = 'block';
+                if (activeSpace.isOwner) {
+                    disconnectBtn.textContent = 'Dejar de Compartir este Espacio (Volver a Cuenta Local)';
+                } else {
+                    disconnectBtn.textContent = 'Desconectarme de este Espacio (Volver a mi Cuenta Local)';
+                }
+            } else {
+                if (activeSpace.passphrase || savedLocalPass) {
+                    disconnectContainer.style.display = 'block';
+                    disconnectBtn.textContent = 'Eliminar Passphrase (Hacer espacio privado exclusivo)';
+                } else {
+                    disconnectContainer.style.display = 'none';
+                }
+            }
+        }
     } else {
         if (tabCreate) {
             tabCreate.style.background = 'var(--primary-color)';
@@ -730,10 +896,11 @@ function setMmpMode(mode) {
         if (sectionTitle) sectionTitle.textContent = 'Crear un Nuevo Espacio Compartido';
         if (sectionDesc) sectionDesc.textContent = 'Asigna un nombre y frase de acceso a un espacio nuevo. Puedes iniciar en blanco o copiar tus datos actuales.';
         if (copyContainer) copyContainer.style.display = 'flex';
-        if (submitBtn) submitBtn.textContent = '🚀 Crear y Conectarme a este Nuevo Espacio';
+        if (submitBtn) submitBtn.textContent = 'Crear y Conectarme a este Nuevo Espacio';
 
         if (inputName) inputName.value = '';
         if (inputPass) inputPass.value = '';
+        if (disconnectContainer) disconnectContainer.style.display = 'none';
     }
 }
 
@@ -747,22 +914,22 @@ function openManagePassphraseModal(moduleName) {
     const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
 
     const moduleTitle = moduleName === 'tesoreria' ? 'Tesorería' : 'Finanzas Personales';
-    if (title) title.textContent = `⚙ Configurar Espacio: ${moduleTitle}`;
+    if (title) title.textContent = `Configurar Espacio: ${moduleTitle}`;
 
     setMmpMode('edit');
 
     // Actualizar banner de espacio activo
     if (badgeEl && descEl) {
         if (!activeSpace.hash) {
-            badgeEl.textContent = `🟢 ${activeSpace.spaceName || 'Cuenta Personal (Google)'} (Espacio Local)`;
-            descEl.innerHTML = `📍 <strong>Acción:</strong> Estás modificando tu espacio actual. Si agregas una Passphrase abajo, tus datos actuales se protegerán y podrás compartirlos con otros.`;
+            badgeEl.textContent = `${activeSpace.spaceName || 'Cuenta Personal (Google)'} (Espacio Local)`;
+            descEl.innerHTML = `<strong>Acción:</strong> Estás modificando tu espacio actual. Si agregas una Passphrase abajo, tus datos actuales se protegerán y podrás compartirlos con otros.`;
         } else {
-            badgeEl.textContent = `👥 ${activeSpace.spaceName || 'Espacio Compartido'} (Espacio Conectado)`;
-            descEl.innerHTML = `📍 <strong>Acción:</strong> Estás modificando este espacio compartido activo. Los cambios se guardarán directamente en este espacio.`;
+            badgeEl.textContent = `${activeSpace.spaceName || 'Espacio Compartido'} (Espacio Conectado)`;
+            descEl.innerHTML = `<strong>Acción:</strong> Estás modificando este espacio compartido activo. Los cambios se guardarán directamente en este espacio.`;
         }
     }
 
-    // La transferencia de propiedad es exclusiva del Módulo de Tesorería para el Tesorero Principal
+    // La transferencia de propiedad es exclusiva del Modulo de Tesoreria para el Tesorero Principal
     if (transferSection) {
         const isOwner = activeSpace.isOwner || !activeSpace.hash;
         transferSection.style.display = (moduleName === 'tesoreria' && isOwner) ? 'block' : 'none';
@@ -817,7 +984,12 @@ function renderMembersTable(moduleName) {
                     <input type="checkbox" ${isBlocked ? 'checked' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'isBlocked', this.checked)">
                 </td>
                 <td style="text-align:center;">
-                    <button class="btn-cat-action btn-cat-delete" onclick="removeMember('${moduleName}', '${uid}')" title="Quitar usuario">🗑️</button>
+                    <button class="btn-cat-action btn-cat-delete" onclick="removeMember('${moduleName}', '${uid}')" title="Quitar usuario">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
                 </td>
             </tr>
         `;
@@ -866,7 +1038,7 @@ window.removeMember = async function(moduleName, uid) {
     const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
     if (!activeSpace.hash || !activeSpace.isOwner) return;
 
-    if (confirm('¿Deseas remover el acceso a este integrante?')) {
+    if (confirm('?Deseas remover el acceso a este integrante?')) {
         delete activeSpace.members[uid];
         const docRef = doc(db, 'shared_' + moduleName, activeSpace.hash);
         await updateDoc(docRef, {
@@ -892,7 +1064,7 @@ function renderAuditLogsModal(moduleName) {
     const logs = activeSpace.logs || [];
 
     if (logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">No hay eventos de actividad registrados aún.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">No hay eventos de actividad registrados aun.</td></tr>';
         return;
     }
 
@@ -951,13 +1123,16 @@ async function saveTransactions() {
         try {
             if (activeTreasurySpace.hash) {
                 const spaceDocRef = doc(db, 'shared_tesoreria', activeTreasurySpace.hash);
-                await setDoc(spaceDocRef, {
-                    spaceName: activeTreasurySpace.spaceName || 'Espacio Compartido',
+                const updateObj = {
                     transactions: transactions,
                     treasuryCategories: treasuryCategories,
                     logs: activeTreasurySpace.logs || [],
                     updatedAt: new Date().toISOString()
-                }, { merge: true });
+                };
+                if (activeTreasurySpace.isOwner && activeTreasurySpace.spaceName && activeTreasurySpace.spaceName !== 'Espacio Compartido') {
+                    updateObj.spaceName = activeTreasurySpace.spaceName;
+                }
+                await setDoc(spaceDocRef, updateObj, { merge: true });
             } else {
                 const userDocRef = doc(db, 'users', currentUser.uid);
                 await setDoc(userDocRef, {
@@ -982,12 +1157,12 @@ function initFilters() {
     
     filterMonth.value = currentMonth;
     
-    // Rellenar aÑos disponibles dinámicamente
+    // Rellenar aios disponibles din!micamente
     populateYearFilter(currentYear);
 }
 
 function populateYearFilter(defaultYear) {
-    // Obtenemos todos los aÑos de las transacciones guardadas
+    // Obtenemos todos los aios de las transacciones guardadas
     const years = new Set();
     years.add(defaultYear);
     years.add(defaultYear - 1);
@@ -1000,7 +1175,7 @@ function populateYearFilter(defaultYear) {
         }
     });
     
-    // Ordenar aÑos
+    // Ordenar aios
     const sortedYears = Array.from(years).sort((a, b) => b - a);
     
     filterYear.innerHTML = '';
@@ -1070,7 +1245,7 @@ function populatePfYearFilter(defaultYear) {
     }
 }
 
-// --- FUNCIONES MÓDULO FINANZAS PERSONALES ---
+// --- FUNCIONES MoDULO FINANZAS PERSONALES ---
 
 async function setupSpaceListener(moduleName) {
     if (!currentUser || !db) {
@@ -1092,8 +1267,12 @@ async function setupSpaceListener(moduleName) {
             treasuryUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (data.treasurySpaceName) activeTreasurySpace.spaceName = data.treasurySpaceName;
-                    if (data.treasuryPassphrase) activeTreasurySpace.passphrase = data.treasuryPassphrase;
+                    const localName = data.treasurySpaceName || localStorage.getItem('treasury_space_name') || 'Cuenta Personal';
+                    const localPass = data.treasuryPassphrase || localStorage.getItem('treasury_passphrase') || '';
+                    activeTreasurySpace.spaceName = localName;
+                    activeTreasurySpace.passphrase = localPass;
+                    localStorage.setItem('treasury_space_name', localName);
+                    if (localPass) localStorage.setItem('treasury_passphrase', localPass);
                     if (data.transactions && Array.isArray(data.transactions)) {
                         if (data.transactions.length > 0 || transactions.length === 0) {
                             transactions = data.transactions;
@@ -1117,7 +1296,7 @@ async function setupSpaceListener(moduleName) {
                 updateSpaceBadgeUI('tesoreria');
                 render();
             }, (error) => {
-                console.error("Error en Snapshot Tesorería:", error);
+                console.error("Error en Snapshot Tesoreria:", error);
             });
             return;
         }
@@ -1125,46 +1304,13 @@ async function setupSpaceListener(moduleName) {
         const spaceDocRef = doc(db, 'shared_tesoreria', activeTreasurySpace.hash);
         treasuryUnsubscribe = onSnapshot(spaceDocRef, async (docSnap) => {
             if (!docSnap.exists()) {
-                const importCheck = document.getElementById('passphrase-import-local-check');
-                const mmpImportCheck = document.getElementById('mmp-import-local-check');
-                const shouldImport = (importCheck && importCheck.checked) || (mmpImportCheck && mmpImportCheck.checked);
-
-                const initialData = {
-                    spaceName: activeTreasurySpace.spaceName || 'Espacio Compartido',
-                    ownerUid: currentUser.uid,
-                    ownerEmail: currentUser.email,
-                    pendingOwnerTransfer: false,
-                    members: {
-                        [currentUser.uid]: {
-                            email: currentUser.email,
-                            displayName: currentUser.displayName || currentUser.email.split('@')[0],
-                            joinedAt: new Date().toISOString(),
-                            isBlocked: false,
-                            permissions: { allowEdit: true, allowDelete: true }
-                        }
-                    },
-                    transactions: shouldImport ? [...transactions] : [],
-                    treasuryCategories: shouldImport ? [...treasuryCategories] : [...DEFAULT_TREASURY_CATEGORIES],
-                    logs: [{
-                        id: Date.now().toString(),
-                        timestamp: new Date().toLocaleString(),
-                        userEmail: currentUser.email,
-                        action: 'CREAR',
-                        details: shouldImport ? 'Creó el espacio compartido convirtiendo/incluyendo sus datos actuales' : 'Creó el espacio de trabajo compartido en blanco'
-                    }]
-                };
-                await setDoc(spaceDocRef, initialData);
-                activeTreasurySpace.isOwner = true;
-                activeTreasurySpace.permissions = { allowEdit: true, allowDelete: true };
-                activeTreasurySpace.isBlocked = false;
-                activeTreasurySpace.members = initialData.members;
-                activeTreasurySpace.logs = initialData.logs;
-                if (!shouldImport) {
-                    transactions = [];
-                    treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
-                }
-            } else {
-                const data = docSnap.data();
+                console.warn("El espacio de tesoreria no existe. Desconectando...");
+                showToast("El espacio no existe o la clave es incorrecta.", "error");
+                disconnectActiveSpace('tesoreria');
+                return;
+            }
+            
+            const data = docSnap.data();
                 
                 if (data.pendingOwnerTransfer && data.ownerEmail && data.ownerEmail.toLowerCase() === currentUser.email.toLowerCase()) {
                     await updateDoc(spaceDocRef, {
@@ -1176,17 +1322,48 @@ async function setupSpaceListener(moduleName) {
                                 timestamp: new Date().toLocaleString(),
                                 userEmail: currentUser.email,
                                 action: 'TRANSFERIR_PROPIEDAD',
-                                details: `Asumió el cargo de Tesorero Principal por transferencia.`
+                                details: `Asumio el cargo de Tesorero Principal por transferencia.`
                             },
                             ...(data.logs || []).slice(0, 99)
                         ]
                     });
-                    showToast('🎉 ¡Bienvenido! Has sido reconocido como el nuevo Tesorero Principal de este espacio.', 'success');
+                    showToast(' !Bienvenido! Has sido reconocido como el nuevo Tesorero Principal de este espacio.', 'success');
                 }
                 
-                const isOwner = data.ownerUid === currentUser.uid || (data.ownerEmail && data.ownerEmail.toLowerCase() === currentUser.email.toLowerCase());
+                const savedList = userSavedWorkspaces['tesoreria'] || [];
+                const savedEntry = savedList.find(w => w.hash === activeTreasurySpace.hash);
+                const isLocallyOwned = localStorage.getItem('owned_space_' + activeTreasurySpace.hash) === 'true';
+                const isSavedOwner = savedEntry ? (savedEntry.isOwner !== false) : false;
+                const isFirestoreOwner = (data.ownerUid && currentUser && data.ownerUid === currentUser.uid) ||
+                                        (data.ownerEmail && currentUser && currentUser.email && data.ownerEmail.toLowerCase() === currentUser.email.toLowerCase()) ||
+                                        (!data.ownerUid || data.ownerUid === 'local_user');
+
+                const isOwner = isLocallyOwned || isSavedOwner || isFirestoreOwner || activeTreasurySpace.isOwner === true;
                 activeTreasurySpace.isOwner = isOwner;
-                activeTreasurySpace.spaceName = data.spaceName || activeTreasurySpace.spaceName;
+
+                let officialName = data.spaceName;
+                if (!officialName || officialName === 'Espacio Compartido') {
+                    if (savedEntry && savedEntry.name && savedEntry.name !== 'Espacio Compartido') {
+                        officialName = savedEntry.name;
+                        updateDoc(spaceDocRef, { spaceName: officialName }).catch(e => console.warn("Aviso auto-reparando nombre:", e));
+                    }
+                }
+
+                if (isOwner && currentUser && data.ownerUid !== currentUser.uid) {
+                    updateDoc(spaceDocRef, { ownerUid: currentUser.uid, ownerEmail: currentUser.email || '' }).catch(e => console.warn("Error auto-reparando ownerUid:", e));
+                }
+
+                if (officialName) {
+                    activeTreasurySpace.spaceName = officialName;
+                    const savedList = userSavedWorkspaces['tesoreria'] || [];
+                    const savedEntry = savedList.find(w => w.hash === activeTreasurySpace.hash);
+                    if (savedEntry && savedEntry.name !== officialName) {
+                        savedEntry.name = officialName;
+                        userSavedWorkspaces['tesoreria'] = savedList;
+                        saveSavedWorkspacesToUser();
+                    }
+                }
+
                 activeTreasurySpace.members = data.members || {};
                 activeTreasurySpace.logs = data.logs || [];
                 
@@ -1196,7 +1373,7 @@ async function setupSpaceListener(moduleName) {
                         displayName: currentUser.displayName || currentUser.email.split('@')[0],
                         joinedAt: new Date().toISOString(),
                         isBlocked: false,
-                        permissions: { allowEdit: false, allowDelete: false }
+                        permissions: { allowAdd: true, allowEdit: false, allowDelete: false, isReadOnly: false }
                     };
                     await updateDoc(spaceDocRef, {
                         members: activeTreasurySpace.members
@@ -1208,7 +1385,7 @@ async function setupSpaceListener(moduleName) {
                 activeTreasurySpace.isBlocked = isBlocked;
                 
                 if (isBlocked) {
-                    showToast('🛑 Acceso Restringido: Tu cuenta ha sido bloqueada para este módulo.', 'error');
+                    showToast('Acceso Restringido: Tu cuenta ha sido bloqueada para este modulo.', 'error');
                     const blockedAlert = document.getElementById('passphrase-blocked-alert');
                     if (blockedAlert) blockedAlert.classList.remove('hidden-element');
                     openPassphraseModal('tesoreria');
@@ -1216,23 +1393,30 @@ async function setupSpaceListener(moduleName) {
                 }
                 
                 if (isOwner) {
-                    activeTreasurySpace.permissions = { allowEdit: true, allowDelete: true };
-                } else if (userMemberData && userMemberData.permissions) {
-                    activeTreasurySpace.permissions = userMemberData.permissions;
+                    activeTreasurySpace.permissions = { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false };
                 } else {
-                    activeTreasurySpace.permissions = { allowEdit: false, allowDelete: false };
+                    const rawP = userMemberData ? userMemberData.permissions : {};
+                    const isReadOnly = rawP && rawP.isReadOnly === true;
+                    const allowAdd = !isReadOnly && (rawP && rawP.allowAdd !== undefined ? rawP.allowAdd : true);
+                    const allowEdit = !isReadOnly && (rawP && rawP.allowEdit === true);
+                    const allowDelete = !isReadOnly && (rawP && rawP.allowDelete === true);
+                    activeTreasurySpace.permissions = {
+                        allowAdd,
+                        allowEdit,
+                        allowDelete,
+                        isReadOnly
+                    };
                 }
                 
                 transactions = data.transactions || [];
                 if (data.treasuryCategories) treasuryCategories = data.treasuryCategories;
-            }
             
-            updateSpaceBadgeUI('tesoreria');
-            updateModulePermissionUI('tesoreria');
-            render();
-            renderAuditLogsModal('tesoreria');
-            renderMembersTable('tesoreria');
-        });
+                updateSpaceBadgeUI('tesoreria');
+                updateModulePermissionUI('tesoreria');
+                render();
+                renderAuditLogsModal('tesoreria');
+                renderMembersTable('tesoreria');
+            });
     } else {
         if (personalUnsubscribe) {
             personalUnsubscribe();
@@ -1246,8 +1430,12 @@ async function setupSpaceListener(moduleName) {
             personalUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (data.personalSpaceName) activePersonalSpace.spaceName = data.personalSpaceName;
-                    if (data.personalPassphrase) activePersonalSpace.passphrase = data.personalPassphrase;
+                    const localName = data.personalSpaceName || localStorage.getItem('personal_space_name') || 'Cuenta Personal';
+                    const localPass = data.personalPassphrase || localStorage.getItem('personal_passphrase') || '';
+                    activePersonalSpace.spaceName = localName;
+                    activePersonalSpace.passphrase = localPass;
+                    localStorage.setItem('personal_space_name', localName);
+                    if (localPass) localStorage.setItem('personal_passphrase', localPass);
                     if (data.personalExpenses && Array.isArray(data.personalExpenses)) {
                         if (data.personalExpenses.length > 0 || personalExpenses.length === 0) {
                             personalExpenses = data.personalExpenses;
@@ -1300,50 +1488,46 @@ async function setupSpaceListener(moduleName) {
         const spaceDocRef = doc(db, 'shared_personales', activePersonalSpace.hash);
         personalUnsubscribe = onSnapshot(spaceDocRef, async (docSnap) => {
             if (!docSnap.exists()) {
-                const importCheck = document.getElementById('passphrase-import-local-check');
-                const mmpImportCheck = document.getElementById('mmp-import-local-check');
-                const shouldImport = (importCheck && importCheck.checked) || (mmpImportCheck && mmpImportCheck.checked);
-
-                const initialData = {
-                    spaceName: activePersonalSpace.spaceName || 'Espacio Compartido',
-                    ownerUid: currentUser.uid,
-                    ownerEmail: currentUser.email,
-                    members: {
-                        [currentUser.uid]: {
-                            email: currentUser.email,
-                            displayName: currentUser.displayName || currentUser.email.split('@')[0],
-                            joinedAt: new Date().toISOString(),
-                            isBlocked: false,
-                            permissions: { allowEdit: true, allowDelete: true }
-                        }
-                    },
-                    personalExpenses: shouldImport ? [...personalExpenses] : [],
-                    personalIncomes: shouldImport ? JSON.parse(JSON.stringify(personalIncomes)) : {},
-                    personalCategories: shouldImport ? [...personalCategories] : [...DEFAULT_PERSONAL_CATEGORIES],
-                    logs: [{
-                        id: Date.now().toString(),
-                        timestamp: new Date().toLocaleString(),
-                        userEmail: currentUser.email,
-                        action: 'CREAR',
-                        details: shouldImport ? 'Creó el espacio compartido convirtiendo/incluyendo sus datos actuales' : 'Creó el espacio de finanzas compartidas en blanco'
-                    }]
-                };
-                await setDoc(spaceDocRef, initialData);
-                activePersonalSpace.isOwner = true;
-                activePersonalSpace.permissions = { allowEdit: true, allowDelete: true };
-                activePersonalSpace.isBlocked = false;
-                activePersonalSpace.members = initialData.members;
-                activePersonalSpace.logs = initialData.logs;
-                if (!shouldImport) {
-                    personalExpenses = [];
-                    personalIncomes = {};
-                    personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
-                }
+                console.warn("El espacio de finanzas personales no existe. Desconectando...");
+                showToast("El espacio no existe o la clave es incorrecta.", "error");
+                disconnectActiveSpace('personales');
+                return;
             } else {
                 const data = docSnap.data();
-                const isOwner = data.ownerUid === currentUser.uid || (data.ownerEmail && data.ownerEmail.toLowerCase() === currentUser.email.toLowerCase());
+                const savedList = userSavedWorkspaces['personales'] || [];
+                const savedEntry = savedList.find(w => w.hash === activePersonalSpace.hash);
+                const isLocallyOwned = localStorage.getItem('owned_space_' + activePersonalSpace.hash) === 'true';
+                const isSavedOwner = savedEntry ? (savedEntry.isOwner !== false) : false;
+                const isFirestoreOwner = (data.ownerUid && currentUser && data.ownerUid === currentUser.uid) ||
+                                        (data.ownerEmail && currentUser && currentUser.email && data.ownerEmail.toLowerCase() === currentUser.email.toLowerCase()) ||
+                                        (!data.ownerUid || data.ownerUid === 'local_user');
+
+                const isOwner = isLocallyOwned || isSavedOwner || isFirestoreOwner || activePersonalSpace.isOwner === true;
                 activePersonalSpace.isOwner = isOwner;
-                activePersonalSpace.spaceName = data.spaceName || activePersonalSpace.spaceName;
+
+                let officialName = data.spaceName;
+                if (!officialName || officialName === 'Espacio Compartido') {
+                    if (savedEntry && savedEntry.name && savedEntry.name !== 'Espacio Compartido') {
+                        officialName = savedEntry.name;
+                        updateDoc(spaceDocRef, { spaceName: officialName }).catch(e => console.warn("Aviso auto-reparando nombre:", e));
+                    }
+                }
+
+                if (isOwner && currentUser && data.ownerUid !== currentUser.uid) {
+                    updateDoc(spaceDocRef, { ownerUid: currentUser.uid, ownerEmail: currentUser.email || '' }).catch(e => console.warn("Error auto-reparando ownerUid:", e));
+                }
+
+                if (officialName) {
+                    activePersonalSpace.spaceName = officialName;
+                    const savedList = userSavedWorkspaces['personales'] || [];
+                    const savedEntry = savedList.find(w => w.hash === activePersonalSpace.hash);
+                    if (savedEntry && savedEntry.name !== officialName) {
+                        savedEntry.name = officialName;
+                        userSavedWorkspaces['personales'] = savedList;
+                        saveSavedWorkspacesToUser();
+                    }
+                }
+
                 activePersonalSpace.members = data.members || {};
                 activePersonalSpace.logs = data.logs || [];
                 
@@ -1353,7 +1537,7 @@ async function setupSpaceListener(moduleName) {
                         displayName: currentUser.displayName || currentUser.email.split('@')[0],
                         joinedAt: new Date().toISOString(),
                         isBlocked: false,
-                        permissions: { allowEdit: false, allowDelete: false }
+                        permissions: { allowAdd: true, allowEdit: false, allowDelete: false, isReadOnly: false }
                     };
                     await updateDoc(spaceDocRef, {
                         members: activePersonalSpace.members
@@ -1365,7 +1549,7 @@ async function setupSpaceListener(moduleName) {
                 activePersonalSpace.isBlocked = isBlocked;
                 
                 if (isBlocked) {
-                    showToast('🛑 Acceso Restringido: Tu cuenta ha sido bloqueada para este módulo.', 'error');
+                    showToast('Acceso Restringido: Tu cuenta ha sido bloqueada para este modulo.', 'error');
                     const blockedAlert = document.getElementById('passphrase-blocked-alert');
                     if (blockedAlert) blockedAlert.classList.remove('hidden-element');
                     openPassphraseModal('personales');
@@ -1373,11 +1557,19 @@ async function setupSpaceListener(moduleName) {
                 }
                 
                 if (isOwner) {
-                    activePersonalSpace.permissions = { allowEdit: true, allowDelete: true };
-                } else if (userMemberData && userMemberData.permissions) {
-                    activePersonalSpace.permissions = userMemberData.permissions;
+                    activePersonalSpace.permissions = { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false };
                 } else {
-                    activePersonalSpace.permissions = { allowEdit: false, allowDelete: false };
+                    const rawP = userMemberData ? userMemberData.permissions : {};
+                    const isReadOnly = rawP && rawP.isReadOnly === true;
+                    const allowAdd = !isReadOnly && (rawP && rawP.allowAdd !== undefined ? rawP.allowAdd : true);
+                    const allowEdit = !isReadOnly && (rawP && rawP.allowEdit === true);
+                    const allowDelete = !isReadOnly && (rawP && rawP.allowDelete === true);
+                    activePersonalSpace.permissions = {
+                        allowAdd,
+                        allowEdit,
+                        allowDelete,
+                        isReadOnly
+                    };
                 }
                 
                 personalExpenses = data.personalExpenses || [];
@@ -1434,14 +1626,17 @@ async function savePersonalFinances() {
         try {
             if (activePersonalSpace.hash) {
                 const spaceDocRef = doc(db, 'shared_personales', activePersonalSpace.hash);
-                await setDoc(spaceDocRef, {
-                    spaceName: activePersonalSpace.spaceName || 'Espacio Compartido',
+                const updateObj = {
                     personalExpenses: personalExpenses,
                     personalIncomes: personalIncomes,
                     personalCategories: personalCategories,
                     logs: activePersonalSpace.logs || [],
                     updatedAt: new Date().toISOString()
-                }, { merge: true });
+                };
+                if (activePersonalSpace.isOwner && activePersonalSpace.spaceName && activePersonalSpace.spaceName !== 'Espacio Compartido') {
+                    updateObj.spaceName = activePersonalSpace.spaceName;
+                }
+                await setDoc(spaceDocRef, updateObj, { merge: true });
             } else {
                 const userDocRef = doc(db, 'users', currentUser.uid);
                 await setDoc(userDocRef, {
@@ -1453,7 +1648,7 @@ async function savePersonalFinances() {
             }
         } catch (e) {
             console.error('Error guardando finanzas personales en Firestore', e);
-            showToast('Error de sincronización con la nube.', 'error');
+            showToast('Error de sincronizacion con la nube.', 'error');
         }
     }
 }
@@ -1466,11 +1661,11 @@ function showModule(moduleName) {
     dashboardContainer.classList.add('hidden-element');
     personalFinancesContainer.classList.add('hidden-element');
     
-    // Actualizar indicador del módulo activo en la cabecera
+    // Actualizar indicador del modulo activo en la cabecera
     const moduleIndicator = document.getElementById('module-indicator');
     if (moduleIndicator) {
         if (moduleName === 'tesoreria') {
-            moduleIndicator.textContent = 'Tesorería';
+            moduleIndicator.textContent = 'Tesoreria';
             moduleIndicator.classList.remove('hidden-element');
         } else if (moduleName === 'personales') {
             moduleIndicator.textContent = 'Finanzas Personales';
@@ -1486,9 +1681,13 @@ function showModule(moduleName) {
     } else if (moduleName === 'tesoreria') {
         dashboardContainer.classList.remove('hidden-element');
         if (btnBackToMenu) btnBackToMenu.classList.remove('hidden-element');
+        updateSpaceBadgeUI('tesoreria');
+        updateModulePermissionUI('tesoreria');
     } else if (moduleName === 'personales') {
         personalFinancesContainer.classList.remove('hidden-element');
         if (btnBackToMenu) btnBackToMenu.classList.remove('hidden-element');
+        updateSpaceBadgeUI('personales');
+        updateModulePermissionUI('personales');
         renderPersonalFinances();
     }
     
@@ -1498,7 +1697,7 @@ function showModule(moduleName) {
 async function checkAndClonePfExpenses(selYear, selMonth) {
     if (personalExpenses.length === 0) return false;
     
-    // 1. Filtrar los gastos que pertenecen al mes/aÑo seleccionado
+    // 1. Filtrar los gastos que pertenecen al mes/aio seleccionado
     const currentMonthExpenses = personalExpenses.filter(e => {
         if (!e.fecha) return false;
         const [y, m] = e.fecha.split('-').map(Number);
@@ -1508,7 +1707,7 @@ async function checkAndClonePfExpenses(selYear, selMonth) {
     // Si ya hay gastos en este mes, no hacemos nada
     if (currentMonthExpenses.length > 0) return false;
     
-    // 2. Buscar el mes más cercano en el pasado que contenga gastos
+    // 2. Buscar el mes m!s cercano en el pasado que contenga gastos
     let bestPastYear = -1;
     let bestPastMonth = -1;
     let maxTimeVal = -1;
@@ -1528,10 +1727,10 @@ async function checkAndClonePfExpenses(selYear, selMonth) {
         }
     });
     
-    // Si no se encontró ningún período anterior con datos, salir
+    // Si no se encontro ningun periodo anterior con datos, salir
     if (maxTimeVal === -1) return false;
     
-    // 3. Obtener los gastos del períododo origen
+    // 3. Obtener los gastos del periododo origen
     const sourceExpenses = personalExpenses.filter(e => {
         if (!e.fecha) return false;
         const [y, m] = e.fecha.split('-').map(Number);
@@ -1540,12 +1739,12 @@ async function checkAndClonePfExpenses(selYear, selMonth) {
     
     if (sourceExpenses.length === 0) return false;
     
-    // 4. Clonar gastos al nuevo períododo
+    // 4. Clonar gastos al nuevo periododo
     const clonedExpenses = [];
     const targetMonthStr = String(selMonth + 1).padStart(2, '0');
     const targetPeriodKey = `${selYear}-${targetMonthStr}`;
     
-    // Obtener último día del mes destino
+    // Obtener ultimo dia del mes destino
     const lastDayOfTargetMonth = new Date(selYear, selMonth + 1, 0).getDate();
     
     sourceExpenses.forEach(e => {
@@ -1569,7 +1768,7 @@ async function checkAndClonePfExpenses(selYear, selMonth) {
         });
     });
     
-    // Copiar también el presupuesto si no está configurado en el mes destino
+    // Copiar tambien el presupuesto si no est! configurado en el mes destino
     if (!personalIncomes[targetPeriodKey]) {
         const sourcePeriodKey = `${bestPastYear}-${String(bestPastMonth + 1).padStart(2, '0')}`;
         const sourceIncome = personalIncomes[sourcePeriodKey];
@@ -1583,19 +1782,19 @@ async function checkAndClonePfExpenses(selYear, selMonth) {
     
     // Guardar en Firestore/localStorage
     await savePersonalFinances();
-    showToast(`Se precargaron los gastos y presupuesto desde el períododo anterior.`, 'info');
+    showToast(`Se precargaron los gastos y presupuesto desde el periododo anterior.`, 'info');
     return true;
 }
 
 function renderPersonalFinances() {
     if (!personalFinancesContainer || personalFinancesContainer.classList.contains('hidden-element')) return;
     
-    // Filtrar fijos y variables por períododo seleccionado
+    // Filtrar fijos y variables por periododo seleccionado
     const isAllMonths = pfFilterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(pfFilterMonth.value);
     const selYear = parseInt(pfFilterYear.value);
     
-    // Si no es vista anual, verificar y precargar gastos si está vacío
+    // Si no es vista anual, verificar y precargar gastos si est! vacio
     if (!isAllMonths) {
         checkAndClonePfExpenses(selYear, selMonth).then(wasCloned => {
             if (wasCloned) {
@@ -1617,7 +1816,7 @@ function renderPersonalFinances() {
     if (pfFixedCount) pfFixedCount.textContent = `${fixedExpenses.length} ${fixedExpenses.length === 1 ? 'item' : 'items'}`;
     if (pfVariableCount) pfVariableCount.textContent = `${variableExpenses.length} ${variableExpenses.length === 1 ? 'item' : 'items'}`;
     
-    // Calcular resÚmenes
+    // Calcular resumenes
     let totalPaid = 0;
     let totalPending = 0;
     
@@ -1630,7 +1829,7 @@ function renderPersonalFinances() {
         }
     });
     
-    // Obtener presupuesto/ingreso segÚn el filtro
+    // Obtener presupuesto/ingreso segun el filtro
     let currentIncome = 0;
     if (isAllMonths) {
         let annualSum = 0;
@@ -1664,7 +1863,7 @@ function renderPersonalFinances() {
     
     const balance = currentIncome - totalPaid;
     
-    // Renderizar resÚmenes en las tarjetas
+    // Renderizar resumenes en las tarjetas
     if (pfTotalPaid) pfTotalPaid.textContent = formatCurrency(totalPaid).replace('RD$', 'RD$ ');
     if (pfTotalPending) pfTotalPending.textContent = formatCurrency(totalPending).replace('RD$', 'RD$ ');
     if (pfTotalBalance) {
@@ -1685,7 +1884,7 @@ function renderPersonalFinances() {
         spentPct = (totalSpent / currentIncome) * 100;
     }
     
-    // Determinar color dinámico de la barra
+    // Determinar color din!mico de la barra
     let barColor = 'var(--income-color)'; // Verde < 70%
     if (spentPct >= 70 && spentPct <= 90) {
         barColor = '#f59e0b'; // Amarillo 70% - 90%
@@ -1720,14 +1919,14 @@ function renderPersonalFinances() {
     const renderList = (listEl, items) => {
         if (!listEl) return;
         if (items.length === 0) {
-            listEl.innerHTML = '<div class="empty-state" style="padding: 20px;"><p>No hay gastos registrados aquí.</p></div>';
+            listEl.innerHTML = '<div class="empty-state" style="padding: 20px;"><p>No hay gastos registrados aqui.</p></div>';
             return;
         }
         
         listEl.innerHTML = items.map(item => {
             const isPaid = item.estado === 'pagado';
             
-            // Buscar color de la categoría
+            // Buscar color de la categoria
             let catColor = '#6b7280'; // gris por defecto
             if (item.categoria) {
                 const found = personalCategories.find(c => c.name.toLowerCase() === item.categoria.toLowerCase());
@@ -1771,7 +1970,7 @@ function renderPersonalFinances() {
             `;
         }).join('');
         
-        // Agregar manejadores de eventos dinámicos
+        // Agregar manejadores de eventos din!micos
         listEl.querySelectorAll('.btn-payment-state').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
@@ -1797,7 +1996,7 @@ function renderPersonalFinances() {
     renderList(pfFixedList, fixedExpenses);
     renderList(pfVariableList, variableExpenses);
     
-    // Renderizar gráficos de Finanzas Personales
+    // Renderizar gr!ficos de Finanzas Personales
     renderPfCharts();
 }
 
@@ -1805,7 +2004,7 @@ async function handlePfExpenseSubmit(e) {
     e.preventDefault();
 
     if (activePersonalSpace.permissions.isReadOnly || activePersonalSpace.permissions.allowAdd === false) {
-        showToast('🛑 Modo Solo Lectura: No tienes permiso para registrar gastos.', 'error');
+        showToast('i Modo Solo Lectura: No tienes permiso para registrar gastos.', 'error');
         return;
     }
 
@@ -1830,7 +2029,7 @@ async function handlePfExpenseSubmit(e) {
     }
     
     if (editingPfExpenseId) {
-        // Modo Edición
+        // Modo Edicion
         const idx = personalExpenses.findIndex(item => item.id === editingPfExpenseId);
         if (idx !== -1) {
             personalExpenses[idx].fecha = dateVal;
@@ -1841,10 +2040,10 @@ async function handlePfExpenseSubmit(e) {
             personalExpenses[idx].categoria = categoryVal;
             
             await savePersonalFinances();
-            addAuditLog('personales', 'EDITAR', `Modificó gasto "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
-            showToast('Gasto personal actualizado con éxito.', 'success');
+            addAuditLog('personales', 'EDITAR', `Modifico gasto "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
+            showToast('Gasto personal actualizado con exito.', 'success');
             
-            // Restablecer el botón de envío y limpiar estado de edición
+            // Restablecer el boton de envio y limpiar estado de edicion
             cancelEditPersonalExpense();
         }
     } else {
@@ -1861,8 +2060,8 @@ async function handlePfExpenseSubmit(e) {
         
         personalExpenses.unshift(newExpense);
         await savePersonalFinances();
-        addAuditLog('personales', 'CREAR', `Registró gasto "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
-        showToast('Gasto personal registrado con éxito.', 'success');
+        addAuditLog('personales', 'CREAR', `Registro gasto "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
+        showToast('Gasto personal registrado con exito.', 'success');
         
         // Resetear formulario
         pfConcept.value = '';
@@ -1874,7 +2073,7 @@ async function handlePfExpenseSubmit(e) {
         userEditedPfCategory = false;
     }
     
-    // Recargar filtros en base a los nuevos aÑos registrados si aplica
+    // Recargar filtros en base a los nuevos aios registrados si aplica
     const now = new Date();
     populatePfYearFilter(now.getFullYear());
     
@@ -1896,7 +2095,7 @@ function startEditPersonalExpense(id) {
     pfStatus.value = item.estado;
     if (pfCategory) pfCategory.value = item.categoria || '';
     
-    // Cambiar texto de botón submit
+    // Cambiar texto de boton submit
     if (pfSubmitText) pfSubmitText.textContent = 'Guardar';
     if (btnPfCancelEdit) btnPfCancelEdit.classList.remove('hidden-btn');
     
@@ -1932,7 +2131,7 @@ function cancelEditPersonalExpense() {
     if (pfCategory) pfCategory.value = '';
     if (pfDate) pfDate.value = getTodayString();
     
-    // Restablecer botón submit
+    // Restablecer boton submit
     if (pfSubmitText) pfSubmitText.textContent = 'Agregar';
     if (btnPfCancelEdit) btnPfCancelEdit.classList.add('hidden-btn');
     
@@ -1984,7 +2183,7 @@ async function deletePersonalExpense(id) {
         personalExpenses.splice(idx, 1);
         await savePersonalFinances();
         if (targetItem) {
-            addAuditLog('personales', 'ELIMINAR', `Eliminó gasto "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
+            addAuditLog('personales', 'ELIMINAR', `Elimino gasto "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
         }
         renderPersonalFinances();
         showToast('Gasto personal eliminado.', 'info');
@@ -1999,10 +2198,10 @@ function downloadPfReport() {
     const translations = {
         es: {
             noExpensesRegistered: 'No hay gastos personales registrados para generar el reporte.',
-            noExpensesPeriod: 'No hay gastos registrados en el período seleccionado.',
+            noExpensesPeriod: 'No hay gastos registrados en el periodo seleccionado.',
             reportTitle: 'Reporte de Finanzas Personales',
             subtitle: 'Control de gastos y presupuesto personal',
-            period: 'Período',
+            period: 'Periodo',
             generated: 'Generado',
             budget: 'Ingreso / Presupuesto',
             totalPaid: 'Total Pagado',
@@ -2016,7 +2215,7 @@ function downloadPfReport() {
             amount: 'Monto',
             paid: 'PAGADO',
             pending: 'PENDIENTE',
-            noRecords: 'No hay registros en esta sección',
+            noRecords: 'No hay registros en esta seccion',
             footer: 'Reporte de Finanzas Personales - Generado localmente y de forma privada por Income Manage.',
             months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
         },
@@ -2044,50 +2243,50 @@ function downloadPfReport() {
             months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
         },
         fr: {
-            noExpensesRegistered: 'Aucune dépense personnelle enregistrée pour générer le rapport.',
-            noExpensesPeriod: 'Aucune dépense enregistrée sur la période sélectionnée.',
+            noExpensesRegistered: 'Aucune depense personnelle enregistree pour generer le rapport.',
+            noExpensesPeriod: 'Aucune depense enregistree sur la periode selectionnee.',
             reportTitle: 'Rapport de Finances Personnelles',
-            subtitle: 'Contrôle des dépenses et budget personnel',
-            period: 'Période',
-            generated: 'Généré le',
+            subtitle: 'Contrle des depenses et budget personnel',
+            period: 'Periode',
+            generated: 'Genere le',
             budget: 'Revenu / Budget',
-            totalPaid: 'Total Payé',
+            totalPaid: 'Total Paye',
             totalPending: 'Total En Attente',
             availableBalance: 'Solde Disponible',
-            fixedExpenses: 'Dépenses Fixes',
-            variableExpenses: 'Dépenses Variables / Imprévues',
+            fixedExpenses: 'Depenses Fixes',
+            variableExpenses: 'Depenses Variables / Imprevues',
             date: 'Date',
             concept: 'Concept',
             status: 'Statut',
             amount: 'Montant',
-            paid: 'PAYÉ',
+            paid: 'PAY',
             pending: 'EN ATTENTE',
             noRecords: 'Aucun enregistrement dans cette section',
-            footer: 'Rapport de Finances Personnelles - Généré localement et en toute confidentialité par Income Manage.',
-            months: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+            footer: 'Rapport de Finances Personnelles - Genere localement et en toute confidentialite par Income Manage.',
+            months: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre']
         },
         pt: {
-            noExpensesRegistered: 'Nenhuma despesa pessoal registrada para gerar o relatório.',
-            noExpensesPeriod: 'Nenhuma despesa registrada no período selecionado.',
-            reportTitle: 'Relatório de Finanças Pessoais',
-            subtitle: 'Controle de despesas e orçamento pessoal',
-            period: 'Período',
+            noExpensesRegistered: 'Nenhuma despesa pessoal registrada para gerar o relatorio.',
+            noExpensesPeriod: 'Nenhuma despesa registrada no periodo selecionado.',
+            reportTitle: 'Relatorio de Financas Pessoais',
+            subtitle: 'Controle de despesas e orcamento pessoal',
+            period: 'Periodo',
             generated: 'Gerado em',
-            budget: 'Renda / Orçamento',
+            budget: 'Renda / Orcamento',
             totalPaid: 'Total Pago',
             totalPending: 'Total Pendente',
-            availableBalance: 'Saldo Disponível',
+            availableBalance: 'Saldo Disponivel',
             fixedExpenses: 'Despesas Fixas',
-            variableExpenses: 'Despesas Variáveis / Imprevistas',
+            variableExpenses: 'Despesas Vari!veis / Imprevistas',
             date: 'Data',
             concept: 'Conceito',
             status: 'Status',
             amount: 'Valor',
             paid: 'PAGO',
             pending: 'PENDENTE',
-            noRecords: 'Nenhum registro nesta seção',
-            footer: 'Relatório de Finanças Pessoais - Gerado localmente e de forma privada por Income Manage.',
-            months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+            noRecords: 'Nenhum registro nesta secao',
+            footer: 'Relatorio de Financas Pessoais - Gerado localmente e de forma privada por Income Manage.',
+            months: ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         },
         it: {
             noExpensesRegistered: 'Nessuna spesa personale registrata per generare il report.',
@@ -2113,16 +2312,16 @@ function downloadPfReport() {
             months: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
         },
         de: {
-            noExpensesRegistered: 'Keine persönlichen Ausgaben registriert, um den Bericht zu erstellen.',
-            noExpensesPeriod: 'Keine Ausgaben im ausgewählten Zeitraum registriert.',
-            reportTitle: 'Persönlicher Finanzbericht',
-            subtitle: 'Ausgabenkontrolle und persönliches Budget',
+            noExpensesRegistered: 'Keine persnlichen Ausgaben registriert, um den Bericht zu erstellen.',
+            noExpensesPeriod: 'Keine Ausgaben im ausgewahlten Zeitraum registriert.',
+            reportTitle: 'Persnlicher Finanzbericht',
+            subtitle: 'Ausgabenkontrolle und persnliches Budget',
             period: 'Zeitraum',
             generated: 'Erstellt am',
             budget: 'Einnahmen / Budget',
             totalPaid: 'Gesamt Bezahlt',
             totalPending: 'Gesamt Ausstehend',
-            availableBalance: 'Verfügbares Guthaben',
+            availableBalance: 'Verfugbares Guthaben',
             fixedExpenses: 'Fixkosten',
             variableExpenses: 'Variable / Unerwartete Ausgaben',
             date: 'Datum',
@@ -2131,9 +2330,9 @@ function downloadPfReport() {
             amount: 'Betrag',
             paid: 'BEZAHLT',
             pending: 'AUSSTEHEND',
-            noRecords: 'Keine Einträge in diesem Bereich',
-            footer: 'Persönlicher Finanzbericht - Lokal und privat von Income Manage generiert.',
-            months: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+            noRecords: 'Keine Eintrage in diesem Bereich',
+            footer: 'Persnlicher Finanzbericht - Lokal und privat von Income Manage generiert.',
+            months: ['Januar', 'Februar', 'Marz', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
         }
     };
     
@@ -2144,7 +2343,7 @@ function downloadPfReport() {
         return;
     }
     
-    // Filtrar fijos y variables por períododo seleccionado
+    // Filtrar fijos y variables por periododo seleccionado
     const isAllMonths = pfFilterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(pfFilterMonth.value);
     const selYear = parseInt(pfFilterYear.value);
@@ -2171,7 +2370,7 @@ function downloadPfReport() {
         else totalPending += amt;
     });
     
-    // Obtener presupuesto/ingreso segÚn el filtro
+    // Obtener presupuesto/ingreso segun el filtro
     let currentIncome = 0;
     if (isAllMonths) {
         let annualSum = 0;
@@ -2308,7 +2507,7 @@ function downloadPfReport() {
         `;
     }
     
-    // Detectar si es dispositivo mÓvil
+    // Detectar si es dispositivo movil
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
                      || (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
                      
@@ -2428,7 +2627,7 @@ function downloadPfReport() {
             color: #777777;
             margin-top: 30px;
         }
-        /* Ocultar widgets y elementos de traducción inyectados por el navegador */
+        /* Ocultar widgets y elementos de traduccion inyectados por el navegador */
         .skiptranslate,
         #google_translate_element,
         .goog-te-banner-frame,
@@ -2503,7 +2702,7 @@ function downloadPfReport() {
             printWindow.document.write(reportHTML);
             printWindow.document.close();
         } else {
-            showToast('El navegador bloqueó la ventana emergente de impresión.', 'error');
+            showToast('El navegador bloqueo la ventana emergente de impresion.', 'error');
         }
     } else {
         const printReportContainer = document.getElementById('print-report-container');
@@ -2567,7 +2766,7 @@ function exportPfBackup() {
     
     csvContent += 'id,fecha,concepto,monto,tipo,estado,categoria\r\n';
     
-    // De más antiguo a más reciente
+    // De m!s antiguo a m!s reciente
     const sorted = [...personalExpenses].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
     
     sorted.forEach(e => {
@@ -2595,7 +2794,7 @@ function exportPfBackup() {
     link.click();
     document.body.removeChild(link);
     
-    showToast('Respaldo de finanzas personales exportado con éxito.', 'success');
+    showToast('Respaldo de finanzas personales exportado con exito.', 'success');
 }
 
 function handleImportPfCsvFile(e) {
@@ -2624,7 +2823,7 @@ function parseAndValidatePfCsv(content) {
     
     const lines = content.split(/\r?\n/);
     if (lines.length < 2) {
-        showToast('El archivo CSV está vacío o incompleto.', 'error');
+        showToast('El archivo CSV est! vacio o incompleto.', 'error');
         return;
     }
     
@@ -2632,7 +2831,7 @@ function parseAndValidatePfCsv(content) {
     let validCount = 0;
     let startIdx = 0;
     
-    // Analizar metadata del presupuesto (pueden ser múltiples líneas de presupuesto mensual)
+    // Analizar metadata del presupuesto (pueden ser multiples lineas de presupuesto mensual)
     while (startIdx < lines.length) {
         const lineClean = lines[startIdx].replace(/^\uFEFF/, '').trim();
         if (lineClean.startsWith('METADATA_PRESUPUESTO_MENSUAL,')) {
@@ -2642,7 +2841,7 @@ function parseAndValidatePfCsv(content) {
             parsedPfIncomesToImport[mKey] = mVal;
             startIdx++;
         } else if (lineClean.startsWith('METADATA_PRESUPUESTO,')) {
-            // Compatibilidad legacy: asignar presupuesto único al mes actual
+            // Compatibilidad legacy: asignar presupuesto unico al mes actual
             const parts = lineClean.split(',');
             const mVal = parseFloat(parts[1]) || 0.00;
             const now = new Date();
@@ -2668,7 +2867,7 @@ function parseAndValidatePfCsv(content) {
     const isNew7Col = headers.length === 7 && headers[0] === 'id' && headers[1] === 'fecha' && headers[2] === 'concepto' && headers[3] === 'monto' && headers[4] === 'tipo' && headers[5] === 'estado' && headers[6] === 'categoria';
     
     if (!isLegacy6Col && !isNew7Col) {
-        showToast('Formato de CSV de finanzas personales inválido.', 'error');
+        showToast('Formato de CSV de finanzas personales inv!lido.', 'error');
         return;
     }
     
@@ -2713,7 +2912,7 @@ function parseAndValidatePfCsv(content) {
     }
     
     if (validCount === 0 && Object.keys(parsedPfIncomesToImport).length === 0) {
-        showToast('No se encontraron registros de finanzas personales válidos.', 'error');
+        showToast('No se encontraron registros de finanzas personales v!lidos.', 'error');
         return;
     }
     
@@ -2726,7 +2925,7 @@ function parseAndValidatePfCsv(content) {
     if (errorCount > 0) {
         statsMessage += `<br><span style="color: var(--expense-color);">Se omitieron <strong>${errorCount}</strong> filas debido a errores de formato.</span>`;
     }
-    statsMessage += `<br><br>¿Estás seguro de que deseas proceder? Los gastos actuales serán reemplazados por completo.`;
+    statsMessage += `<br><br>?Est!s seguro de que deseas proceder? Los gastos actuales ser!n reemplazados por completo.`;
     
     if (pfImportStatsText) {
         pfImportStatsText.innerHTML = statsMessage;
@@ -2745,7 +2944,7 @@ async function executePfImport() {
     renderPersonalFinances();
     
     closeModal(modalPfImport);
-    showToast('Respaldo de finanzas personales importado con éxito.', 'success');
+    showToast('Respaldo de finanzas personales importado con exito.', 'success');
 }
 
 async function executePfClearData() {
@@ -2767,59 +2966,69 @@ async function executePfClearData() {
 
 function setupEventListeners() {
     // Cambio de tema
-    themeToggleBtn.addEventListener('click', toggleTheme);
+    if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
     
     // Filtros de fecha
-    filterMonth.addEventListener('change', render);
-    filterYear.addEventListener('change', render);
+    if (filterMonth) filterMonth.addEventListener('change', render);
+    if (filterYear) filterYear.addEventListener('change', render);
     
     // Autocompletado y validaciones en el Formulario
-    inputConcept.addEventListener('input', handleConceptInput);
-    inputConcept.addEventListener('focus', handleConceptInput);
-    inputCategory.addEventListener('input', () => {
-        userEditedCategory = true;
-    });
+    if (inputConcept) {
+        inputConcept.addEventListener('input', handleConceptInput);
+        inputConcept.addEventListener('focus', handleConceptInput);
+    }
+    if (inputCategory) {
+        inputCategory.addEventListener('input', () => {
+            userEditedCategory = true;
+        });
+    }
     
     // Cerrar lista de autocompletado si se hace clic fuera
     document.addEventListener('click', (e) => {
-        if (e.target !== inputConcept && e.target !== autocompleteList) {
+        if (typeof inputConcept !== 'undefined' && inputConcept && typeof autocompleteList !== 'undefined' && autocompleteList && e.target !== inputConcept && e.target !== autocompleteList) {
             closeAutocomplete();
         }
-        if (e.target !== pfConcept && e.target !== pfAutocompleteList) {
+        if (typeof pfConcept !== 'undefined' && pfConcept && typeof pfAutocompleteList !== 'undefined' && pfAutocompleteList && e.target !== pfConcept && e.target !== pfAutocompleteList) {
             closePfAutocomplete();
         }
     });
     
-    // Envío del formulario
-    transactionForm.addEventListener('submit', handleFormSubmit);
-    btnCancelEdit.addEventListener('click', cancelEdit);
+    // Envio del formulario
+    if (transactionForm) transactionForm.addEventListener('submit', handleFormSubmit);
+    if (btnCancelEdit) btnCancelEdit.addEventListener('click', cancelEdit);
     
-    // Botón para simular clic en input file para importar CSV
-    btnImportTrigger.addEventListener('click', () => {
-        csvFileInput.value = ''; // Resetear
-        csvFileInput.click();
-    });
-    csvFileInput.addEventListener('change', handleImportCsvFile);
+    // Boton para simular clic en input file para importar CSV
+    if (btnImportTrigger) {
+        btnImportTrigger.addEventListener('click', () => {
+            if (csvFileInput) {
+                csvFileInput.value = ''; // Resetear
+                csvFileInput.click();
+            }
+        });
+    }
+    if (csvFileInput) csvFileInput.addEventListener('change', handleImportCsvFile);
     
     // Botones de acciones generales
-    btnMonthlyReport.addEventListener('click', downloadMonthlyReport);
-    btnExportBackup.addEventListener('click', downloadFullBackup);
-    btnClearData.addEventListener('click', () => openModal(modalClear));
+    if (btnMonthlyReport) btnMonthlyReport.addEventListener('click', downloadMonthlyReport);
+    if (btnExportBackup) btnExportBackup.addEventListener('click', downloadFullBackup);
+    if (btnClearData) btnClearData.addEventListener('click', () => openModal(modalClear));
     
     // Botones del modal de eliminar
-    btnDeleteCancel.addEventListener('click', () => closeModal(modalDelete));
-    btnDeleteConfirm.addEventListener('click', confirmDeleteTransaction);
+    if (btnDeleteCancel) btnDeleteCancel.addEventListener('click', () => closeModal(modalDelete));
+    if (btnDeleteConfirm) btnDeleteConfirm.addEventListener('click', confirmDeleteTransaction);
     
-    // Botones del modal de importación
-    btnImportCancel.addEventListener('click', () => {
-        closeModal(modalImport);
-        parsedCsvTransactionsToImport = [];
-    });
-    btnImportConfirm.addEventListener('click', executeImportCsv);
+    // Botones del modal de importacion
+    if (btnImportCancel) {
+        btnImportCancel.addEventListener('click', () => {
+            closeModal(modalImport);
+            parsedCsvTransactionsToImport = [];
+        });
+    }
+    if (btnImportConfirm) btnImportConfirm.addEventListener('click', executeImportCsv);
     
     // Botones del modal de limpiar
-    btnClearCancel.addEventListener('click', () => closeModal(modalClear));
-    btnClearConfirm.addEventListener('click', executeClearData);
+    if (btnClearCancel) btnClearCancel.addEventListener('click', () => closeModal(modalClear));
+    if (btnClearConfirm) btnClearConfirm.addEventListener('click', executeClearData);
     
     // Habilitar cierre de modales con la 'X' superior y los botones 'Cerrar' al pie
     document.querySelectorAll('.modal-close-btn, #btn-mmp-close, #btn-logs-close').forEach(btn => {
@@ -2829,50 +3038,99 @@ function setupEventListeners() {
         });
     });
     
-    // Autenticación con Google
+    // Autenticacion con Google
     if (btnLoginGoogle) {
+        const defaultGoogleBtnHtml = `
+            <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+            </svg>
+            Iniciar sesión con Google
+        `;
+
         btnLoginGoogle.addEventListener('click', async () => {
             try {
-                await signInWithPopup(auth, googleProvider);
+                btnLoginGoogle.disabled = true;
+                btnLoginGoogle.style.opacity = '0.75';
+                btnLoginGoogle.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite; margin-right: 8px;">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+                    </svg>
+                    Conectando con Google...
+                `;
+
+                try {
+                    await signInWithPopup(auth, googleProvider);
+                } catch (popupError) {
+                    if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
+                        console.warn("Popup bloqueado o cancelado, intentando redireccion:", popupError);
+                        showToast('Ventana emergente bloqueada. Redirigiendo a Google...', 'info');
+                        await signInWithRedirect(auth, googleProvider);
+                        return;
+                    }
+                    throw popupError;
+                }
             } catch (error) {
-                console.error("Error al iniciar sesiÓn: ", error);
-                showToast('Error al iniciar sesiÓn con Google.', 'error');
+                console.error("Error al iniciar sesion con Google: ", error);
+                if (error.code === 'auth/popup-closed-by-user') {
+                    showToast('Se cerro la ventana de Google. Intenta de nuevo.', 'warning');
+                } else if (error.code === 'auth/popup-blocked') {
+                    showToast('Ventana emergente bloqueada. Redirigiendo a Google...', 'info');
+                    try {
+                        await signInWithRedirect(auth, googleProvider);
+                    } catch (rErr) {
+                        alert('No se pudo iniciar sesion. Permite ventanas emergentes en tu navegador.');
+                    }
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    alert('Dominio no autorizado: ' + window.location.hostname + '. Agrega este dominio en Firebase Console > Authentication > Authorized domains.');
+                } else if (error.code === 'auth/operation-not-supported-in-this-environment') {
+                    alert('El protocolo actual no soporta autenticacion directa. Abre la aplicacion desde un servidor web (http://localhost:... o https://).');
+                } else {
+                    alert('Error de Google Sign-In [' + (error.code || 'desconocido') + ']: ' + (error.message || ''));
+                }
+            } finally {
+                btnLoginGoogle.disabled = false;
+                btnLoginGoogle.style.opacity = '1';
+                btnLoginGoogle.innerHTML = defaultGoogleBtnHtml;
             }
         });
     }
     
-    // Cerrar sesión
+    // Cerrar sesion
     if (btnLogout) {
         btnLogout.addEventListener('click', async () => {
             try {
                 await signOut(auth);
-                showToast('Sesión cerrada correctamente.', 'info');
+                showToast('Sesion cerrada correctamente.', 'info');
             } catch (error) {
-                console.error("Error al cerrar sesión: ", error);
-                showToast('Error al cerrar sesión.', 'error');
+                console.error("Error al cerrar sesion: ", error);
+                showToast('Error al cerrar sesion.', 'error');
             }
         });
     }
     
     if (userProfile) {
         userProfile.addEventListener('click', async () => {
-            // Si estamos en pantalla pequeña (móvil) donde el botón logout está oculto,
-            // permitimos cerrar sesión al tocar la foto de perfil (previo diálogo de confirmación)
+            // Si estamos en pantalla pequena (movil) donde el boton logout est! oculto,
+            // permitimos cerrar sesion al tocar la foto de perfil (previo di!logo de confirmacion)
             if (window.innerWidth <= 600) {
-                if (confirm('¿Deseas cerrar sesión?')) {
+                if (confirm('?Deseas cerrar sesion?')) {
                     try {
                         await signOut(auth);
-                        showToast('Sesión cerrada correctamente.', 'info');
+                        showToast('Sesion cerrada correctamente.', 'info');
                     } catch (error) {
-                        console.error("Error al cerrar sesión: ", error);
-                        showToast('Error al cerrar sesión.', 'error');
+                        console.error("Error al cerrar sesion: ", error);
+                        showToast('Error al cerrar sesion.', 'error');
                     }
                 }
             }
         });
     }
     
-    // Navegación de módulos con Passphrase y Espacios
+    // Navegacion de modulos con Passphrase y Espacios
     if (btnGotoTesoreria) {
         btnGotoTesoreria.addEventListener('click', () => {
             openPassphraseModal('tesoreria');
@@ -2934,67 +3192,107 @@ function setupEventListeners() {
             const passVal = inputPass ? inputPass.value.trim() : '';
 
             if (!passVal) {
-                showToast('Por favor introduce una frase de acceso (Passphrase) válida.', 'warning');
+                showToast('Por favor introduce una frase de acceso (Passphrase) v!lida.', 'warning');
                 return;
             }
 
-            const hash = await hashPassphrase(currentPassphraseModalModule, passVal);
+            const targetModule = currentPassphraseModalModule || 'tesoreria';
 
-            // Obtener automáticamente el Nombre oficial creado por el Propietario desde Firestore
-            let name = `Espacio ${passVal}`;
-            if (db) {
-                const collectionName = currentPassphraseModalModule === 'tesoreria' ? 'shared_tesoreria' : 'shared_personales';
-                const spaceDocRef = doc(db, collectionName, hash);
-                const docSnap = await getDoc(spaceDocRef);
-                if (docSnap.exists() && docSnap.data().spaceName) {
-                    name = docSnap.data().spaceName;
+            try {
+                const hash = await hashPassphrase(targetModule, passVal);
+
+                // Validar si el espacio realmente existe en Firestore antes de permitir el acceso
+                let name = 'Espacio Compartido';
+                if (db) {
+                    try {
+                        const collectionName = targetModule === 'tesoreria' ? 'shared_tesoreria' : 'shared_personales';
+                        const spaceDocRef = doc(db, collectionName, hash);
+                        const docSnap = await getDoc(spaceDocRef);
+                        
+                        if (!docSnap || !docSnap.exists()) {
+                            showToast('La Passphrase es incorrecta o el espacio no existe.', 'error');
+                            return; // Bloquea la conexion y creacion de espacio fantasma
+                        }
+
+                        if (docSnap.data().spaceName) {
+                            name = docSnap.data().spaceName;
+                        }
+                    } catch (fetchErr) {
+                        console.error("Error al validar el espacio:", fetchErr);
+                        showToast('Error al conectar con la nube.', 'error');
+                        return;
+                    }
                 }
-            }
 
-            const savedList = userSavedWorkspaces[currentPassphraseModalModule] || [];
-            const existingIdx = savedList.findIndex(w => w.hash === hash);
-            if (existingIdx >= 0) {
-                savedList[existingIdx].name = name;
-                savedList[existingIdx].passphrase = passVal;
-            } else {
-                savedList.push({ hash, passphrase: passVal, name });
-            }
-            userSavedWorkspaces[currentPassphraseModalModule] = savedList;
-            await saveSavedWorkspacesToUser();
+                // Guardar en la lista de accesos guardados del usuario
+                const savedList = userSavedWorkspaces[targetModule] || [];
+                const existingIdx = savedList.findIndex(w => w.hash === hash);
+                if (existingIdx >= 0) {
+                    savedList[existingIdx].name = name;
+                    savedList[existingIdx].passphrase = passVal;
+                } else {
+                    savedList.push({ hash, passphrase: passVal, name });
+                }
+                userSavedWorkspaces[targetModule] = savedList;
 
-            if (currentPassphraseModalModule === 'tesoreria') {
-                activeTreasurySpace = {
-                    passphrase: passVal,
-                    hash,
-                    spaceName: name,
-                    isOwner: false,
-                    permissions: { allowEdit: false, allowDelete: false },
-                    isBlocked: false,
-                    members: {},
-                    logs: []
-                };
-                await setupSpaceListener('tesoreria');
-            } else {
-                activePersonalSpace = {
-                    passphrase: passVal,
-                    hash,
-                    spaceName: name,
-                    isOwner: false,
-                    permissions: { allowEdit: false, allowDelete: false },
-                    isBlocked: false,
-                    members: {},
-                    logs: []
-                };
-                await setupSpaceListener('personales');
-            }
+                try {
+                    await saveSavedWorkspacesToUser();
+                } catch (saveErr) {
+                    console.warn("No se pudo guardar la lista de espacios en el usuario:", saveErr);
+                }
 
-            if (inputPass) inputPass.value = '';
+                const isOwner = (existingOwnerUid && currentUser && existingOwnerUid === currentUser.uid) ||
+                                (existingOwnerEmail && currentUser && currentUser.email && existingOwnerEmail.toLowerCase() === currentUser.email.toLowerCase());
+
+                // Activar el espacio y suscribirse en tiempo real
+                if (targetModule === 'tesoreria') {
+                    activeTreasurySpace = {
+                        passphrase: passVal,
+                        hash,
+                        spaceName: name,
+                        isOwner: isOwner,
+                        permissions: isOwner ? { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false } : { allowAdd: true, allowEdit: false, allowDelete: false, isReadOnly: false },
+                        isBlocked: false,
+                        members: {},
+                        logs: []
+                    };
+                    await setupSpaceListener('tesoreria');
+                } else {
+                    activePersonalSpace = {
+                        passphrase: passVal,
+                        hash,
+                        spaceName: name,
+                        isOwner: isOwner,
+                        permissions: isOwner ? { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false } : { allowAdd: true, allowEdit: false, allowDelete: false, isReadOnly: false },
+                        isBlocked: false,
+                        members: {},
+                        logs: []
+                    };
+                    await setupSpaceListener('personales');
+                }
+
+                if (inputPass) inputPass.value = '';
+                closePassphraseModal();
+                showModule(targetModule);
+                showToast(`Conectado exitosamente al espacio '${name}'`, 'success');
+            } catch (err) {
+                console.error("Error al acceder con passphrase:", err);
+                showToast('Ocurrio un error al procesar la frase de acceso. Intenta de nuevo.', 'error');
+            }
+        });
+    }
+
+    // Boton Volver a Espacio Local desde Modal de Cambiar Espacio
+    const btnReturnLocal = document.getElementById('btn-return-local-space');
+    if (btnReturnLocal) {
+        btnReturnLocal.addEventListener('click', async () => {
+            await disconnectActiveSpace(currentPassphraseModalModule);
             closePassphraseModal();
             showModule(currentPassphraseModalModule);
         });
     }
 
-    // Botón Continuar a Cuenta Personal / Cerrar Modal
+    // Boton Continuar a Cuenta Personal / Cerrar Modal
     const btnPassphraseSkip = document.getElementById('btn-passphrase-skip');
     if (btnPassphraseSkip) {
         btnPassphraseSkip.addEventListener('click', async () => {
@@ -3005,9 +3303,9 @@ function setupEventListeners() {
 
             if (currentPassphraseModalModule === 'tesoreria') {
                 activeTreasurySpace = {
-                    passphrase: '',
+                    passphrase: localStorage.getItem('treasury_passphrase') || '',
                     hash: '',
-                    spaceName: 'Cuenta Personal (Google)',
+                    spaceName: localStorage.getItem('treasury_space_name') || 'Cuenta Personal',
                     isOwner: true,
                     permissions: { allowEdit: true, allowDelete: true },
                     isBlocked: false,
@@ -3017,9 +3315,9 @@ function setupEventListeners() {
                 await setupSpaceListener('tesoreria');
             } else {
                 activePersonalSpace = {
-                    passphrase: '',
+                    passphrase: localStorage.getItem('personal_passphrase') || '',
                     hash: '',
-                    spaceName: 'Cuenta Personal (Google)',
+                    spaceName: localStorage.getItem('personal_space_name') || 'Cuenta Personal',
                     isOwner: true,
                     permissions: { allowEdit: true, allowDelete: true },
                     isBlocked: false,
@@ -3033,7 +3331,7 @@ function setupEventListeners() {
         });
     }
 
-    // Alternar visibilidad de contraseña
+    // Alternar visibilidad de contrasena
     const btnTogglePassVis = document.getElementById('btn-toggle-passphrase-vis');
     if (btnTogglePassVis) {
         btnTogglePassVis.addEventListener('click', () => {
@@ -3044,13 +3342,13 @@ function setupEventListeners() {
         });
     }
 
-    // Manejadores de pestañas en modal de gestión de espacio
+    // Manejadores de pestanas en modal de gestion de espacio
     const mmpTabEdit = document.getElementById('mmp-tab-edit');
     const mmpTabCreate = document.getElementById('mmp-tab-create');
     if (mmpTabEdit) mmpTabEdit.addEventListener('click', () => setMmpMode('edit'));
     if (mmpTabCreate) mmpTabCreate.addEventListener('click', () => setMmpMode('create'));
 
-    // Formulario de Configuración / Creación de Espacio
+    // Formulario de Configuracion / Creacion de Espacio
     const mmpSpaceForm = document.getElementById('mmp-space-form');
     if (mmpSpaceForm) {
         mmpSpaceForm.addEventListener('submit', async (e) => {
@@ -3068,6 +3366,9 @@ function setupEventListeners() {
             const isTreasury = currentManagePassphraseModule === 'tesoreria';
             const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
 
+            // Helper para limpiar valores undefined antes de guardar en Firestore
+            const sanitizeData = (data) => JSON.parse(JSON.stringify(data, (key, value) => value === undefined ? null : value));
+
             try {
                 if (currentMmpMode === 'create') {
                     if (!newPass) {
@@ -3078,7 +3379,69 @@ function setupEventListeners() {
                     const copyCheck = document.getElementById('mmp-copy-local-check');
                     const shouldCopy = copyCheck ? copyCheck.checked : false;
 
+                    const effectiveUser = currentUser || auth.currentUser;
+                    const safeEmail = (effectiveUser && effectiveUser.email) ? effectiveUser.email : '';
+                    const safeDisplayName = (effectiveUser && effectiveUser.displayName) ? effectiveUser.displayName : (safeEmail ? safeEmail.split('@')[0] : 'Usuario');
+                    const currentUid = (effectiveUser && effectiveUser.uid) ? effectiveUser.uid : 'local_user';
+
+                    const collectionName = isTreasury ? 'shared_tesoreria' : 'shared_personales';
+                    const sharedDocRef = (effectiveUser && db) ? doc(db, collectionName, hash) : null;
+
+                    // Si existe el documento en Firestore, verificar si pertenece a otro usuario
+                    if (sharedDocRef) {
+                        try {
+                            const existingDocSnap = await getDoc(sharedDocRef);
+                            if (existingDocSnap && existingDocSnap.exists()) {
+                                const existingData = existingDocSnap.data();
+                                const isOtherOwner = existingData.ownerUid && existingData.ownerUid !== currentUid && (!existingData.ownerEmail || existingData.ownerEmail.toLowerCase() !== safeEmail.toLowerCase());
+                                if (isOtherOwner) {
+                                    showToast('Esta frase de acceso (Passphrase) ya está en uso por otro usuario. Si deseas unirte, usa la opción "Acceder a Espacio".', 'error');
+                                    return;
+                                }
+                            }
+                        } catch (checkErr) {
+                            console.warn("Aviso al verificar existencia del espacio:", checkErr);
+                        }
+                    }
+
+                    const initialData = {
+                        spaceName: newName,
+                        ownerUid: currentUid,
+                        ownerEmail: safeEmail,
+                        pendingOwnerTransfer: false,
+                        updatedAt: new Date().toISOString(),
+                        members: {
+                            [currentUid]: {
+                                email: safeEmail,
+                                displayName: safeDisplayName,
+                                joinedAt: new Date().toISOString(),
+                                isBlocked: false,
+                                permissions: { allowEdit: true, allowDelete: true }
+                            }
+                        },
+                        logs: [{
+                            id: Date.now().toString(),
+                            timestamp: new Date().toLocaleString(),
+                            userEmail: safeEmail || 'Usuario',
+                            action: 'CREAR',
+                            details: shouldCopy ? 'Creó el espacio compartido importando datos locales' : 'Creó el espacio compartido en blanco'
+                        }]
+                    };
+
                     if (isTreasury) {
+                        const txData = shouldCopy && Array.isArray(transactions) ? sanitizeData(transactions) : [];
+                        const catData = shouldCopy && Array.isArray(treasuryCategories) ? sanitizeData(treasuryCategories) : [...DEFAULT_TREASURY_CATEGORIES];
+                        initialData.transactions = txData;
+                        initialData.treasuryCategories = catData;
+                        
+                        if (sharedDocRef) {
+                            try {
+                                await setDoc(sharedDocRef, sanitizeData(initialData), { merge: true });
+                            } catch (cloudErr) {
+                                console.warn("Aviso al sincronizar en shared_tesoreria:", cloudErr);
+                            }
+                        }
+                        
                         activeTreasurySpace = {
                             passphrase: newPass,
                             hash,
@@ -3086,10 +3449,35 @@ function setupEventListeners() {
                             isOwner: true,
                             permissions: { allowEdit: true, allowDelete: true },
                             isBlocked: false,
-                            members: {},
-                            logs: []
+                            members: initialData.members,
+                            logs: initialData.logs
                         };
+                        
+                        localStorage.setItem('owned_space_' + hash, 'true');
+                        localStorage.setItem('treasury_space_name', newName);
+                        localStorage.setItem('treasury_passphrase', newPass);
+
+                        if (!shouldCopy) {
+                            transactions = [];
+                            treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
+                        }
+                        saveTransactions();
                     } else {
+                        const expData = shouldCopy && Array.isArray(personalExpenses) ? sanitizeData(personalExpenses) : [];
+                        const incData = shouldCopy && personalIncomes && typeof personalIncomes === 'object' ? sanitizeData(personalIncomes) : {};
+                        const catData = shouldCopy && Array.isArray(personalCategories) ? sanitizeData(personalCategories) : [...DEFAULT_PERSONAL_CATEGORIES];
+                        initialData.personalExpenses = expData;
+                        initialData.personalIncomes = incData;
+                        initialData.personalCategories = catData;
+                        
+                        if (sharedDocRef) {
+                            try {
+                                await setDoc(sharedDocRef, sanitizeData(initialData), { merge: true });
+                            } catch (cloudErr) {
+                                console.warn("Aviso al sincronizar en shared_personales:", cloudErr);
+                            }
+                        }
+                        
                         activePersonalSpace = {
                             passphrase: newPass,
                             hash,
@@ -3097,85 +3485,210 @@ function setupEventListeners() {
                             isOwner: true,
                             permissions: { allowEdit: true, allowDelete: true },
                             isBlocked: false,
-                            members: {},
-                            logs: []
+                            members: initialData.members,
+                            logs: initialData.logs
                         };
+
+                        localStorage.setItem('owned_space_' + hash, 'true');
+                        localStorage.setItem('personal_space_name', newName);
+                        localStorage.setItem('personal_passphrase', newPass);
+
+                        if (!shouldCopy) {
+                            personalExpenses = [];
+                            personalIncomes = {};
+                            personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
+                        }
+                        savePersonalFinances();
+                    }
+
+                    if (effectiveUser && db) {
+                        try {
+                            const userDocRef = doc(db, 'users', effectiveUser.uid);
+                            const userUpdatePayload = {
+                                [isTreasury ? 'treasurySpaceName' : 'personalSpaceName']: newName,
+                                [isTreasury ? 'treasuryPassphrase' : 'personalPassphrase']: newPass,
+                                [isTreasury ? 'treasuryPassphraseHash' : 'personalPassphraseHash']: hash,
+                                updatedAt: new Date().toISOString()
+                            };
+                            if (isTreasury) {
+                                userUpdatePayload.transactions = shouldCopy && Array.isArray(transactions) ? sanitizeData(transactions) : [];
+                                userUpdatePayload.treasuryCategories = shouldCopy && Array.isArray(treasuryCategories) ? sanitizeData(treasuryCategories) : [...DEFAULT_TREASURY_CATEGORIES];
+                            } else {
+                                userUpdatePayload.personalExpenses = shouldCopy && Array.isArray(personalExpenses) ? sanitizeData(personalExpenses) : [];
+                                userUpdatePayload.personalIncomes = shouldCopy && personalIncomes && typeof personalIncomes === 'object' ? sanitizeData(personalIncomes) : {};
+                                userUpdatePayload.personalCategories = shouldCopy && Array.isArray(personalCategories) ? sanitizeData(personalCategories) : [...DEFAULT_PERSONAL_CATEGORIES];
+                            }
+                            await setDoc(userDocRef, userUpdatePayload, { merge: true });
+                        } catch (uErr) {
+                            console.warn("Aviso al guardar en perfil de usuario:", uErr);
+                        }
                     }
 
                     const savedList = userSavedWorkspaces[currentManagePassphraseModule] || [];
-                    if (!savedList.some(w => w.hash === hash)) {
+                    const existingIdx = savedList.findIndex(w => w.hash === hash);
+                    if (existingIdx >= 0) {
+                        savedList[existingIdx].name = newName;
+                        savedList[existingIdx].passphrase = newPass;
+                    } else {
                         savedList.push({ hash, passphrase: newPass, name: newName });
-                        userSavedWorkspaces[currentManagePassphraseModule] = savedList;
+                    }
+                    userSavedWorkspaces[currentManagePassphraseModule] = savedList;
+                    try {
                         await saveSavedWorkspacesToUser();
+                    } catch (swErr) {
+                        console.warn("No se pudo sincronizar workspaces guardados:", swErr);
                     }
 
                     const passImportCheck = document.getElementById('passphrase-import-local-check');
                     if (passImportCheck) passImportCheck.checked = shouldCopy;
 
-                    await setupSpaceListener(currentManagePassphraseModule);
-                    showToast(`🎉 ¡Nuevo espacio '${newName}' creado e iniciado correctamente!`, 'success');
-                } else {
-                    // Modo Edición del espacio activo (Local o Compartido)
-                    activeSpace.spaceName = newName;
-
-                    if (newPass && !activeSpace.hash) {
-                        // Al asignar Passphrase a la Cuenta Personal, se conecta a Espacio Compartido manteniendo todos los datos actuales
-                        const hash = await hashPassphrase(currentManagePassphraseModule, newPass);
-                        activeSpace.hash = hash;
-                        activeSpace.passphrase = newPass;
-                        activeSpace.isOwner = true;
-                        activeSpace.permissions = { allowEdit: true, allowDelete: true };
-
-                        const savedList = userSavedWorkspaces[currentManagePassphraseModule] || [];
-                        if (!savedList.some(w => w.hash === hash)) {
-                            savedList.push({ hash, passphrase: newPass, name: newName });
-                            userSavedWorkspaces[currentManagePassphraseModule] = savedList;
-                            await saveSavedWorkspacesToUser();
-                        }
-
+                    try {
                         await setupSpaceListener(currentManagePassphraseModule);
-                        showToast(`🎉 ¡Tu espacio '${newName}' se ha guardado con tu nueva Passphrase y está activo!`, 'success');
-                    } else {
-                        if (newPass) activeSpace.passphrase = newPass;
+                    } catch (slErr) {
+                        console.warn("Aviso al iniciar listener del espacio:", slErr);
+                    }
 
+                    updateSpaceBadgeUI(currentManagePassphraseModule);
+                    if (isTreasury) render(); else renderPersonalFinances();
+                    showToast(`¡Nuevo espacio '${newName}' creado e iniciado correctamente!`, 'success');
+                } else {
+                    // Modo Edicion del espacio activo (Local o Compartido)
+                    activeSpace.spaceName = newName;
+                    const passToUse = newPass || activeSpace.passphrase || '';
+                    activeSpace.passphrase = passToUse;
+
+                    if (activeSpace.hash) {
+                        // Editando un ESPACIO COMPARTIDO ACTIVO
+                        const collectionName = isTreasury ? 'shared_tesoreria' : 'shared_personales';
                         if (currentUser && db) {
-                            if (activeSpace.hash) {
-                                // Espacio Compartido Conectado
-                                const collectionName = isTreasury ? 'shared_tesoreria' : 'shared_personales';
-                                const docRef = doc(db, collectionName, activeSpace.hash);
-                                const updatePayload = {
-                                    spaceName: newName,
-                                    updatedAt: new Date().toISOString()
-                                };
-                                if (newPass) {
-                                    const newHash = await hashPassphrase(currentManagePassphraseModule, newPass);
-                                    updatePayload.passphrase = newPass;
-                                    updatePayload.passphraseHash = newHash;
-                                }
-                                await setDoc(docRef, updatePayload, { merge: true });
-                            } else {
-                                // Cuenta Personal (Sin Passphrase)
-                                const userDocRef = doc(db, 'users', currentUser.uid);
-                                await setDoc(userDocRef, {
-                                    [isTreasury ? 'treasurySpaceName' : 'personalSpaceName']: newName,
-                                    updatedAt: new Date().toISOString()
-                                }, { merge: true });
+                            const sharedDocRef = doc(db, collectionName, activeSpace.hash);
+                            const safeEmail = currentUser.email || '';
+                            const safeDisplayName = currentUser.displayName || (safeEmail ? safeEmail.split('@')[0] : 'Usuario');
+                            
+                            const sharedData = {
+                                spaceName: newName,
+                                updatedAt: new Date().toISOString()
+                            };
+                            if (passToUse) sharedData.passphrase = passToUse;
+
+                            try {
+                                await setDoc(sharedDocRef, sanitizeData(sharedData), { merge: true });
+                            } catch (sharedSaveErr) {
+                                console.warn("Aviso al guardar cambios en coleccion compartida:", sharedSaveErr);
                             }
                         }
-                        updateSpaceBadgeUI(currentManagePassphraseModule);
-                        showToast('✅ Información de tu espacio actualizada correctamente.', 'success');
+
+                        const savedList = userSavedWorkspaces[currentManagePassphraseModule] || [];
+                        const existingIdx = savedList.findIndex(w => w.hash === activeSpace.hash);
+                        if (existingIdx >= 0) {
+                            savedList[existingIdx].name = newName;
+                            if (passToUse) savedList[existingIdx].passphrase = passToUse;
+                        } else {
+                            savedList.push({ hash: activeSpace.hash, passphrase: passToUse, name: newName, isOwner: true });
+                        }
+                        userSavedWorkspaces[currentManagePassphraseModule] = savedList;
+                        try {
+                            await saveSavedWorkspacesToUser();
+                        } catch (swErr) {
+                            console.warn("No se pudo sincronizar workspaces guardados:", swErr);
+                        }
+
+                        try {
+                            await setupSpaceListener(currentManagePassphraseModule);
+                        } catch (slErr) {
+                            console.warn("Error iniciando listener del espacio:", slErr);
+                        }
+                    } else {
+                        // Editando el ESPACIO LOCAL / PRIVADO
+                        if (isTreasury) {
+                            localStorage.setItem('treasury_space_name', newName);
+                            if (passToUse) localStorage.setItem('treasury_passphrase', passToUse);
+                        } else {
+                            localStorage.setItem('personal_space_name', newName);
+                            if (passToUse) localStorage.setItem('personal_passphrase', passToUse);
+                        }
+
+                        if (currentUser && db) {
+                            const userDocRef = doc(db, 'users', currentUser.uid);
+                            const updatePayload = {
+                                [isTreasury ? 'treasurySpaceName' : 'personalSpaceName']: newName,
+                                updatedAt: new Date().toISOString()
+                            };
+                            if (passToUse) updatePayload[isTreasury ? 'treasuryPassphrase' : 'personalPassphrase'] = passToUse;
+                            await setDoc(userDocRef, updatePayload, { merge: true });
+                        }
                     }
+                    
+                    updateSpaceBadgeUI(currentManagePassphraseModule);
+                    showToast(`Espacio '${newName}' actualizado correctamente.`, 'success');
                 }
 
                 closeModal(document.getElementById('modal-manage-passphrase'));
             } catch (err) {
                 console.error("Error al guardar espacio:", err);
-                showToast('Error al guardar cambios de espacio.', 'error');
+                showToast('Error al guardar cambios de espacio: ' + (err.message || 'Error desconocido'), 'error');
             }
         });
     }
 
-    // Formulario de Transferencia de Propiedad (Exclusivo Módulo de Tesorería)
+    // Boton Desconectarse / Dejar de Compartir Espacio / Eliminar Passphrase Local
+    const btnMmpDisconnect = document.getElementById('btn-mmp-disconnect');
+    if (btnMmpDisconnect) {
+        btnMmpDisconnect.addEventListener('click', async () => {
+            const isTreasury = currentManagePassphraseModule === 'tesoreria';
+            const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
+
+            if (!activeSpace.hash) {
+                // Caso: El usuario está en su cuenta local y desea ELIMINAR la passphrase
+                if (!confirm('¿Deseas eliminar la frase de acceso de tu cuenta local para que sea 100% privada y exclusiva?')) return;
+                
+                activeSpace.passphrase = '';
+                activeSpace.hash = '';
+
+                if (isTreasury) {
+                    localStorage.removeItem('treasury_passphrase');
+                    localStorage.removeItem('treasury_passphrase_hash');
+                } else {
+                    localStorage.removeItem('personal_passphrase');
+                    localStorage.removeItem('personal_passphrase_hash');
+                }
+
+                if (currentUser && db) {
+                    try {
+                        const userDocRef = doc(db, 'users', currentUser.uid);
+                        await setDoc(userDocRef, {
+                            [isTreasury ? 'treasuryPassphrase' : 'personalPassphrase']: '',
+                            [isTreasury ? 'treasuryPassphraseHash' : 'personalPassphraseHash']: '',
+                            updatedAt: new Date().toISOString()
+                        }, { merge: true });
+                    } catch (uErr) {
+                        console.warn("Aviso al limpiar passphrase en Firestore:", uErr);
+                    }
+                }
+
+                const mmpInputPass = document.getElementById('mmp-passphrase-input');
+                if (mmpInputPass) mmpInputPass.value = '';
+                const mmpModal = document.getElementById('modal-manage-passphrase');
+                if (mmpModal) closeModal(mmpModal);
+
+                updateSpaceBadgeUI(currentManagePassphraseModule);
+                showToast('Frase de acceso eliminada. Tu cuenta local ahora es 100% privada y exclusiva.', 'success');
+                return;
+            }
+
+            // Caso: El usuario está en un espacio compartido y desea desconectarse / volver a su cuenta local
+            let confirmMsg = '¿Deseas desconectarte de este espacio compartido y volver a tu Cuenta Local privada?';
+            if (activeSpace.isOwner) {
+                confirmMsg = '¿Deseas dejar de compartir este espacio? Seguirás conservando todos tus datos en tu cuenta local.';
+            }
+
+            if (!confirm(confirmMsg)) return;
+
+            await disconnectActiveSpace(currentManagePassphraseModule);
+        });
+    }
+
+    // Formulario de Transferencia de Propiedad (Exclusivo Modulo de Tesoreria)
     const mmpTransferForm = document.getElementById('mmp-transfer-form');
     if (mmpTransferForm) {
         mmpTransferForm.addEventListener('submit', async (e) => {
@@ -3191,7 +3704,7 @@ function setupEventListeners() {
                 return;
             }
 
-            if (confirm(`¿Estás seguro de transferir los derechos de Tesorero Principal a ${newEmail}? Tu rol pasará a ser integrante estándar.`)) {
+            if (confirm(`?Est!s seguro de transferir los derechos de Tesorero Principal a ${newEmail}? Tu rol pasar! a ser integrante est!ndar.`)) {
                 try {
                     let spaceHash = activeSpace.hash;
                     if (!spaceHash) {
@@ -3199,7 +3712,7 @@ function setupEventListeners() {
                         spaceHash = await hashPassphrase('tesoreria', autoPass);
                         activeSpace.hash = spaceHash;
                         activeSpace.passphrase = autoPass;
-                        activeSpace.spaceName = activeSpace.spaceName || 'Tesorería Iglesia';
+                        activeSpace.spaceName = activeSpace.spaceName || 'Tesoreria Iglesia';
                     }
 
                     const spaceDocRef = doc(db, 'shared_tesoreria', spaceHash);
@@ -3226,7 +3739,7 @@ function setupEventListeners() {
                                 timestamp: new Date().toLocaleString(),
                                 userEmail: currentUser.email,
                                 action: 'TRANSFERIR_PROPIEDAD',
-                                details: `Transfirió la propiedad del módulo de Tesorería a ${newEmail}`
+                                details: `Transfirio la propiedad del modulo de Tesoreria a ${newEmail}`
                             }]
                         });
                     } else {
@@ -3239,7 +3752,7 @@ function setupEventListeners() {
                                     timestamp: new Date().toLocaleString(),
                                     userEmail: currentUser.email,
                                     action: 'TRANSFERIR_PROPIEDAD',
-                                    details: `Transfirió la propiedad del módulo de Tesorería a ${newEmail}`
+                                    details: `Transfirio la propiedad del modulo de Tesoreria a ${newEmail}`
                                 },
                                 ...(activeSpace.logs || []).slice(0, 99)
                             ]
@@ -3249,7 +3762,7 @@ function setupEventListeners() {
                     await setupSpaceListener('tesoreria');
                     if (newEmailInput) newEmailInput.value = '';
                     closeModal(document.getElementById('modal-manage-passphrase'));
-                    showToast(`✅ Transferencia de Tesorero Principal enviada a ${newEmail}.`, 'success');
+                    showToast(` Transferencia de Tesorero Principal enviada a ${newEmail}.`, 'success');
                 } catch (err) {
                     console.error("Error al transferir propiedad:", err);
                     showToast('Error al transferir la propiedad.', 'error');
@@ -3325,11 +3838,11 @@ function setupEventListeners() {
         btnPfClearConfirm.addEventListener('click', executePfClearData);
     }
     
-    // Panel de Configuración de Categorías
+    // Panel de Configuracion de Categorias
     if (btnTManageCategories) {
         btnTManageCategories.addEventListener('click', () => {
             currentCategoryModule = 'tesoreria';
-            if (mcModalTitle) mcModalTitle.textContent = 'Configurar Categorías: Tesorería';
+            if (mcModalTitle) mcModalTitle.textContent = 'Configurar Categorias: Tesoreria';
             resetMcForm();
             renderMcColorPicker();
             renderCategoryManagerList();
@@ -3339,7 +3852,7 @@ function setupEventListeners() {
     if (btnPfManageCategories) {
         btnPfManageCategories.addEventListener('click', () => {
             currentCategoryModule = 'personales';
-            if (mcModalTitle) mcModalTitle.textContent = 'Configurar Categorías: Finanzas Personales';
+            if (mcModalTitle) mcModalTitle.textContent = 'Configurar Categorias: Finanzas Personales';
             resetMcForm();
             renderMcColorPicker();
             renderCategoryManagerList();
@@ -3353,7 +3866,7 @@ function setupEventListeners() {
         btnMcClose.addEventListener('click', () => closeModal(modalManageCategories));
     }
     
-    // Botón de subir al inicio (Scroll-to-top)
+    // Boton de subir al inicio (Scroll-to-top)
     window.addEventListener('scroll', updateScrollTopButtonVisibility);
     const btnScrollTop = document.getElementById('btn-scroll-top');
     if (btnScrollTop) {
@@ -3373,7 +3886,7 @@ function toggleTheme() {
     localStorage.setItem('tema', isDark ? 'dark' : 'light');
     showToast(`Modo ${isDark ? 'oscuro' : 'claro'} activado`, 'info');
     
-    // Si estamos en algún módulo activo, refrescar para actualizar los colores de los textos de los gráficos
+    // Si estamos en algun modulo activo, refrescar para actualizar los colores de los textos de los gr!ficos
     if (currentModule === 'personales') {
         renderPersonalFinances();
     } else if (currentModule === 'tesoreria') {
@@ -3383,7 +3896,7 @@ function toggleTheme() {
 
 // --- LOGICA DE AUTOCOMPLETADO ---
 
-// Normaliza texto eliminando acentos/diacríticos y convirtiendo a minúsculas
+// Normaliza texto eliminando acentos/diacriticos y convirtiendo a minusculas
 function normalizeText(str) {
     if (!str) return '';
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -3401,7 +3914,7 @@ function handleConceptInput() {
         return;
     }
     
-    // Obtener conceptos únicos de los valores por defecto
+    // Obtener conceptos unicos de los valores por defecto
     const conceptMap = new Map();
     DEFAULT_CONCEPT_CATEGORIES.forEach(item => {
         conceptMap.set(normalizeText(item.concepto), {
@@ -3410,7 +3923,7 @@ function handleConceptInput() {
         });
     });
     
-    // Sobrescribir/añadir con el historial de transacciones reales (máxima prioridad)
+    // Sobrescribir/anadir con el historial de transacciones reales (m!xima prioridad)
     transactions.forEach(t => {
         const conceptNorm = t.concepto.trim();
         if (conceptNorm) {
@@ -3426,7 +3939,7 @@ function handleConceptInput() {
     // Buscar coincidencias parciales con el texto normalizado
     const matches = uniqueConcepts.filter(item => 
         normalizeText(item.original).includes(valNorm)
-    ).slice(0, 5); // Máximo 5 sugerencias
+    ).slice(0, 5); // M!ximo 5 sugerencias
     
     if (matches.length > 0) {
         matches.forEach(match => {
@@ -3451,14 +3964,14 @@ function handleConceptInput() {
                 inputCategory.value = match.categoria;
                 userEditedCategory = false; // Resetear bandera al elegir una sugerencia
                 closeAutocomplete();
-                showToast('Categoría autocompletada', 'info');
+                showToast('Categoria autocompletada', 'info');
             });
             
             autocompleteList.appendChild(div);
         });
     }
     
-    // Autocompletado directo y reactivo en el campo categoría
+    // Autocompletado directo y reactivo en el campo categoria
     if (!userEditedCategory) {
         // Buscar coincidencia que empiece con el texto escrito
         const bestMatch = uniqueConcepts.find(item => normalizeText(item.original).startsWith(valNorm)) ||
@@ -3480,7 +3993,7 @@ function handleConceptInput() {
             if (matchedCategoryByKeyword) {
                 inputCategory.value = matchedCategoryByKeyword;
             } else {
-                // Intentar detectar si el término ingresado coincide con el nombre de alguna categoría conocida
+                // Intentar detectar si el termino ingresado coincide con el nombre de alguna categoria conocida
                 const knownCategories = new Set(uniqueConcepts.map(item => item.categoria));
                 const matchedCategory = Array.from(knownCategories).find(cat => 
                     valNorm.includes(normalizeText(cat)) || normalizeText(cat).includes(valNorm)
@@ -3499,28 +4012,28 @@ function closeAutocomplete() {
     autocompleteList.innerHTML = '';
 }
 
-// --- LOGICA DE RENDERIZACIÓN ---
+// --- LOGICA DE RENDERIZACIoN ---
 
 function render() {
     const isAllMonths = filterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(filterMonth.value);
     const selYear = parseInt(filterYear.value);
     
-    // Filtrar transacciones del mes (o todos) y aÑo seleccionados
+    // Filtrar transacciones del mes (o todos) y aio seleccionados
     const filtered = transactions.filter(t => {
         if (!t.fecha) return false;
         const [year, month] = t.fecha.split('-').map(Number);
         return year === selYear && (isAllMonths || (month - 1) === selMonth);
     });
     
-    // Ordenar por fecha descendente, y luego por fecha de creación descendente
+    // Ordenar por fecha descendente, y luego por fecha de creacion descendente
     filtered.sort((a, b) => {
         const dateDiff = new Date(b.fecha) - new Date(a.fecha);
         if (dateDiff !== 0) return dateDiff;
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
     
-    // Calcular Resumen del períododo filtrado
+    // Calcular Resumen del periododo filtrado
     let totalIncome = 0;
     let totalExpense = 0;
     
@@ -3535,7 +4048,7 @@ function render() {
     
     const totalBalance = totalIncome - totalExpense;
     
-    // Calcular Saldo Histórico (toda la historia guardada)
+    // Calcular Saldo Historico (toda la historia guardada)
     let histIncome = 0;
     let histExpense = 0;
     transactions.forEach(t => {
@@ -3548,12 +4061,12 @@ function render() {
     });
     const historicalBalance = histIncome - histExpense;
     
-    // Mostrar totales del períododo
+    // Mostrar totales del periododo
     totalIncomeEl.textContent = formatCurrency(totalIncome);
     totalExpenseEl.textContent = formatCurrency(totalExpense);
     totalBalanceEl.textContent = formatCurrency(totalBalance);
     
-    // Mostrar Saldo Histórico
+    // Mostrar Saldo Historico
     const historicalBalanceEl = document.getElementById('historical-balance');
     if (historicalBalanceEl) {
         historicalBalanceEl.textContent = formatCurrency(historicalBalance);
@@ -3564,31 +4077,31 @@ function render() {
         }
     }
     
-    // Actualizar etiqueta del saldo del períododo
+    // Actualizar etiqueta del saldo del periododo
     const labelBalanceEl = document.getElementById('label-balance');
     if (labelBalanceEl) {
-        labelBalanceEl.textContent = isAllMonths ? 'Saldo del aÑo' : 'Saldo del mes';
+        labelBalanceEl.textContent = isAllMonths ? 'Saldo del aio' : 'Saldo del mes';
     }
 
-    // Actualizar título de la sección de transacciones
+    // Actualizar titulo de la seccion de transacciones
     const labelTransactionsTitleEl = document.getElementById('label-transactions-title');
     if (labelTransactionsTitleEl) {
-        labelTransactionsTitleEl.textContent = isAllMonths ? 'Transacciones del aÑo' : 'Transacciones del mes';
+        labelTransactionsTitleEl.textContent = isAllMonths ? 'Transacciones del aio' : 'Transacciones del mes';
     }
     
-    // Actualizar párrafo de estado vacío
+    // Actualizar p!rrafo de estado vacio
     const labelEmptyStateEl = document.getElementById('label-empty-state');
     if (labelEmptyStateEl) {
-        labelEmptyStateEl.textContent = isAllMonths ? 'No hay transacciones registradas para este aÑo.' : 'No hay transacciones registradas para este mes.';
+        labelEmptyStateEl.textContent = isAllMonths ? 'No hay transacciones registradas para este aio.' : 'No hay transacciones registradas para este mes.';
     }
     
-    // Actualizar texto del botón de reporte
+    // Actualizar texto del boton de reporte
     const labelReportBtnEl = document.getElementById('label-report-btn');
     if (labelReportBtnEl) {
         labelReportBtnEl.textContent = 'Generar reporte';
     }
     
-    // Modificar clases del saldo segÚn su valor (opcional, siempre azul pero da feedback)
+    // Modificar clases del saldo segun su valor (opcional, siempre azul pero da feedback)
     if (totalBalance < 0) {
         totalBalanceEl.style.color = 'var(--expense-color)';
     } else {
@@ -3651,11 +4164,11 @@ function render() {
             const tdAcciones = document.createElement('td');
             tdAcciones.className = 'text-right';
             
-            // Botón Editar (Si tiene permiso)
+            // Boton Editar (Si tiene permiso)
             if (activeTreasurySpace.permissions.allowEdit) {
                 const btnEdit = document.createElement('button');
                 btnEdit.className = 'btn-edit';
-                btnEdit.setAttribute('aria-label', 'Editar transacción');
+                btnEdit.setAttribute('aria-label', 'Editar transaccion');
                 btnEdit.innerHTML = `
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -3666,11 +4179,11 @@ function render() {
                 tdAcciones.appendChild(btnEdit);
             }
             
-            // Botón Eliminar (Si tiene permiso)
+            // Boton Eliminar (Si tiene permiso)
             if (activeTreasurySpace.permissions.allowDelete) {
                 const btnDel = document.createElement('button');
                 btnDel.className = 'btn-delete';
-                btnDel.setAttribute('aria-label', 'Eliminar transacción');
+                btnDel.setAttribute('aria-label', 'Eliminar transaccion');
                 btnDel.innerHTML = `
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"/>
@@ -3686,17 +4199,17 @@ function render() {
         });
     }
     
-    // Renderizar gráficos de Tesorería
+    // Renderizar gr!ficos de Tesoreria
     renderTCharts();
 }
 
-// --- CREAR O EDITAR TRANSACCIÓN (FORM SUBMIT) ---
+// --- CREAR O EDITAR TRANSACCIoN (FORM SUBMIT) ---
 
 function handleFormSubmit(e) {
     e.preventDefault();
 
     if (activeTreasurySpace.permissions.isReadOnly || activeTreasurySpace.permissions.allowAdd === false) {
-        showToast('🛑 Modo Solo Lectura: No tienes permiso para agregar transacciones.', 'error');
+        showToast('i Modo Solo Lectura: No tienes permiso para agregar transacciones.', 'error');
         return;
     }
 
@@ -3714,7 +4227,7 @@ function handleFormSubmit(e) {
     
     const monto = parseFloat(montoRaw);
     if (isNaN(monto) || monto <= 0) {
-        showToast('El monto debe ser un número positivo mayor que 0.', 'error');
+        showToast('El monto debe ser un numero positivo mayor que 0.', 'error');
         return;
     }
     
@@ -3729,7 +4242,7 @@ function handleFormSubmit(e) {
     }
     
     if (editingTransactionId !== null) {
-        // Modo Edición
+        // Modo Edicion
         const idx = transactions.findIndex(t => t.id === editingTransactionId);
         if (idx !== -1) {
             transactions[idx].fecha = fecha;
@@ -3738,11 +4251,11 @@ function handleFormSubmit(e) {
             transactions[idx].categoria = categoria;
             transactions[idx].monto = monto;
             
-            addAuditLog('tesoreria', 'EDITAR', `Modificó ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
+            addAuditLog('tesoreria', 'EDITAR', `Modifico ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
             saveTransactions();
-            showToast('Transacción modificada con éxito.', 'success');
+            showToast('Transaccion modificada con exito.', 'success');
             
-            // Restablecer filtros del mes/año modificado para verlo
+            // Restablecer filtros del mes/ano modificado para verlo
             const [tYear, tMonth] = fecha.split('-').map(Number);
             filterMonth.value = tMonth - 1;
             filterYear.value = tYear;
@@ -3750,13 +4263,13 @@ function handleFormSubmit(e) {
             cancelEdit();
             render();
         } else {
-            showToast('No se encontró la transacción a editar.', 'error');
+            showToast('No se encontro la transaccion a editar.', 'error');
             cancelEdit();
         }
         return;
     }
     
-    // Modo Creación (Nuevo registro)
+    // Modo Creacion (Nuevo registro)
     const newTransaction = {
         id: 't-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
         fecha: fecha,
@@ -3767,18 +4280,18 @@ function handleFormSubmit(e) {
         createdAt: new Date().toISOString()
     };
     
-    // Añadir al inicio o guardar
+    // Anadir al inicio o guardar
     transactions.push(newTransaction);
     
-    addAuditLog('tesoreria', 'CREAR', `Registró ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
+    addAuditLog('tesoreria', 'CREAR', `Registro ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
     // Guardar en localStorage
     saveTransactions();
     
-    // Actualizar filtro de año si ingresaron un año nuevo
+    // Actualizar filtro de ano si ingresaron un ano nuevo
     const inputYear = parseInt(fecha.split('-')[0]);
     populateYearFilter(inputYear);
     
-    // Ajustar filtros para que muestren la fecha de la transacción agregada
+    // Ajustar filtros para que muestren la fecha de la transaccion agregada
     const [tYear, tMonth] = fecha.split('-').map(Number);
     filterMonth.value = tMonth - 1;
     filterYear.value = tYear;
@@ -3793,13 +4306,13 @@ function handleFormSubmit(e) {
     const todayStr = getTodayString();
     inputDate.value = todayStr;
     
-    showToast('Transacción registrada con éxito.', 'success');
+    showToast('Transaccion registrada con exito.', 'success');
     
     // Re-renderizar
     render();
 }
 
-// --- SOPORTE PARA EDICIÓN ---
+// --- SOPORTE PARA EDICIoN ---
 
 function startEditTransaction(id) {
     const t = transactions.find(item => item.id === id);
@@ -3814,7 +4327,7 @@ function startEditTransaction(id) {
     inputType.value = t.tipo;
     inputCategory.value = t.categoria;
     
-    // Modificar botón de guardar cambios
+    // Modificar boton de guardar cambios
     submitBtnText.textContent = 'Guardar';
     btnCancelEdit.classList.remove('hidden-btn');
     
@@ -3833,7 +4346,7 @@ function startEditTransaction(id) {
         behavior: 'smooth'
     });
     
-    showToast('Editando transacción...', 'info');
+    showToast('Editando transaccion...', 'info');
 }
 
 function cancelEdit() {
@@ -3861,7 +4374,7 @@ function cancelEdit() {
     `;
 }
 
-// --- ELIMINAR TRANSACCIÓN ---
+// --- ELIMINAR TRANSACCIoN ---
 
 function requestDeleteTransaction(id) {
     const t = transactions.find(item => item.id === id);
@@ -3874,7 +4387,7 @@ function requestDeleteTransaction(id) {
         <p><strong>Fecha:</strong> ${formatDateString(t.fecha)}</p>
         <p><strong>Concepto:</strong> ${t.concepto}</p>
         <p><strong>Tipo:</strong> ${t.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'}</p>
-        <p><strong>Categoría:</strong> ${t.categoria}</p>
+        <p><strong>Categoria:</strong> ${t.categoria}</p>
         <p><strong>Monto:</strong> ${formatCurrency(t.monto)}</p>
     `;
     
@@ -3890,10 +4403,10 @@ function confirmDeleteTransaction() {
     
     if (transactions.length < initialCount) {
         if (targetItem) {
-            addAuditLog('tesoreria', 'ELIMINAR', `Eliminó ${targetItem.tipo} "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
+            addAuditLog('tesoreria', 'ELIMINAR', `Elimino ${targetItem.tipo} "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
         }
         saveTransactions();
-        showToast('Transacción eliminada correctamente.', 'success');
+        showToast('Transaccion eliminada correctamente.', 'success');
     }
     
     closeModal(modalDelete);
@@ -3927,7 +4440,7 @@ function downloadFullBackup() {
     let csvContent = '\uFEFF'; // UTF-8 BOM para soporte correcto de caracteres en Excel
     csvContent += 'fecha,concepto,tipo,categoria,monto\r\n';
     
-    // Ordenar de más antiguo a más reciente para respaldos coherentes
+    // Ordenar de m!s antiguo a m!s reciente para respaldos coherentes
     const sorted = [...transactions].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
     
     sorted.forEach(t => {
@@ -3954,10 +4467,10 @@ function downloadFullBackup() {
     link.click();
     document.body.removeChild(link);
     
-    showToast('Respaldo completo exportado con éxito.', 'success');
+    showToast('Respaldo completo exportado con exito.', 'success');
 }
 
-// 3. Generar Reporte Mensual/Anual (PDF/Impresión)
+// 3. Generar Reporte Mensual/Anual (PDF/Impresion)
 function downloadMonthlyReport() {
     const isAllMonths = filterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(filterMonth.value);
@@ -3968,26 +4481,26 @@ function downloadMonthlyReport() {
     
     const translations = {
         es: {
-            noTransactionsYear: 'No hay transacciones registradas para este año.',
+            noTransactionsYear: 'No hay transacciones registradas para este ano.',
             noTransactionsMonth: 'No hay transacciones registradas para este mes.',
-            annualReport: 'Reporte Anual de Tesorería',
-            monthlyReport: 'Reporte Mensual de Tesorería',
-            subtitle: 'Detalle de ingresos y gastos de la tesorería de la iglesia',
-            period: 'Período',
+            annualReport: 'Reporte Anual de Tesoreria',
+            monthlyReport: 'Reporte Mensual de Tesoreria',
+            subtitle: 'Detalle de ingresos y gastos de la tesoreria de la iglesia',
+            period: 'Periodo',
             generated: 'Generado el',
             totalIncome: 'Total Ingresos',
             totalExpense: 'Total Gastos',
-            annualBalance: 'Saldo del Año',
+            annualBalance: 'Saldo del Ano',
             monthlyBalance: 'Saldo del Mes',
             date: 'Fecha',
             concept: 'Concepto',
             type: 'Tipo',
-            category: 'Categoría',
+            category: 'Categoria',
             amount: 'Monto',
             income: 'Ingreso',
             expense: 'Gasto',
-            footer: 'Reporte de Tesorería de la Iglesia oficial - Generado de forma local y privada.',
-            transactionsTitle: 'Transacciones del período',
+            footer: 'Reporte de Tesoreria de la Iglesia oficial - Generado de forma local y privada.',
+            transactionsTitle: 'Transacciones del periodo',
             months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
         },
         en: {
@@ -4014,40 +4527,40 @@ function downloadMonthlyReport() {
             months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
         },
         fr: {
-            noTransactionsYear: 'Aucune transaction enregistrée pour cette année.',
-            noTransactionsMonth: 'Aucune transaction enregistrée pour ce mois.',
-            annualReport: 'Rapport Annuel de la Trésorerie',
-            monthlyReport: 'Rapport Mensuel de la Trésorerie',
-            subtitle: 'Détail des revenus et dépenses de la trésorerie de l\'église',
-            period: 'Période',
-            generated: 'Généré le',
+            noTransactionsYear: 'Aucune transaction enregistree pour cette annee.',
+            noTransactionsMonth: 'Aucune transaction enregistree pour ce mois.',
+            annualReport: 'Rapport Annuel de la Tresorerie',
+            monthlyReport: 'Rapport Mensuel de la Tresorerie',
+            subtitle: 'Detail des revenus et depenses de la tresorerie de l\'eglise',
+            period: 'Periode',
+            generated: 'Genere le',
             totalIncome: 'Total des Revenus',
-            totalExpense: 'Total des Dépenses',
-            annualBalance: 'Solde de l\'Année',
+            totalExpense: 'Total des Depenses',
+            annualBalance: 'Solde de l\'Annee',
             monthlyBalance: 'Solde du Mois',
             date: 'Date',
             concept: 'Concept',
             type: 'Type',
-            category: 'Catégorie',
+            category: 'Categorie',
             amount: 'Montant',
             income: 'Revenu',
-            expense: 'Dépense',
-            footer: 'Rapport officiel de la trésorerie de l\'église - Généré localement et en privé.',
-            transactionsTitle: 'Transactions de la période',
-            months: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+            expense: 'Depense',
+            footer: 'Rapport officiel de la tresorerie de l\'eglise - Genere localement et en prive.',
+            transactionsTitle: 'Transactions de la periode',
+            months: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre']
         },
         pt: {
-            noTransactionsYear: 'Nenhuma transação registrada para este ano.',
-            noTransactionsMonth: 'Nenhuma transação registrada para este mês.',
-            annualReport: 'Relatório Anual de Tesouraria',
-            monthlyReport: 'Relatório Mensal de Tesouraria',
+            noTransactionsYear: 'Nenhuma transacao registrada para este ano.',
+            noTransactionsMonth: 'Nenhuma transacao registrada para este mas.',
+            annualReport: 'Relatorio Anual de Tesouraria',
+            monthlyReport: 'Relatorio Mensal de Tesouraria',
             subtitle: 'Detalhamento de receitas e despesas da tesouraria da igreja',
-            period: 'Período',
+            period: 'Periodo',
             generated: 'Gerado em',
             totalIncome: 'Total de Receitas',
             totalExpense: 'Total de Despesas',
             annualBalance: 'Saldo do Ano',
-            monthlyBalance: 'Saldo do Mês',
+            monthlyBalance: 'Saldo do Mas',
             date: 'Data',
             concept: 'Conceito',
             type: 'Tipo',
@@ -4055,9 +4568,9 @@ function downloadMonthlyReport() {
             amount: 'Valor',
             income: 'Receita',
             expense: 'Despesa',
-            footer: 'Relatório Oficial da Tesouraria da Igreja - Gerado localmente e de forma privada.',
-            transactionsTitle: 'Transações do período',
-            months: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+            footer: 'Relatorio Oficial da Tesouraria da Igreja - Gerado localmente e de forma privada.',
+            transactionsTitle: 'Transacues do periodo',
+            months: ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
         },
         it: {
             noTransactionsYear: 'Nessuna transazione registrata per quest\'anno.',
@@ -4083,9 +4596,9 @@ function downloadMonthlyReport() {
             months: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
         },
         de: {
-            noTransactionsYear: 'Für dieses Jahr wurden keine Transaktionen erfasst.',
-            noTransactionsMonth: 'Für diesen Monat wurden keine Transaktionen erfasst.',
-            annualReport: 'Jährlicher Kassenbericht',
+            noTransactionsYear: 'Fur dieses Jahr wurden keine Transaktionen erfasst.',
+            noTransactionsMonth: 'Fur diesen Monat wurden keine Transaktionen erfasst.',
+            annualReport: 'Jahrlicher Kassenbericht',
             monthlyReport: 'Monatlicher Kassenbericht',
             subtitle: 'Details zu Einnahmen und Ausgaben der Kirchenkasse',
             period: 'Zeitraum',
@@ -4103,7 +4616,7 @@ function downloadMonthlyReport() {
             expense: 'Ausgabe',
             footer: 'Offizieller Bericht der Kirchenkasse - Lokal und privat generiert.',
             transactionsTitle: 'Transaktionen des Zeitraums',
-            months: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+            months: ['Januar', 'Februar', 'Marz', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
         }
     };
     
@@ -4184,7 +4697,7 @@ function downloadMonthlyReport() {
                                 <th style="padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:left;">Fecha</th>
                                 <th style="padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:left;">Concepto</th>
                                 <th style="padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:left;">Tipo</th>
-                                <th style="padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:left;">Categoría</th>
+                                <th style="padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:left;">Categoria</th>
                                 <th style="padding: 6px 8px; border-bottom: 1px solid #dddddd; font-size: 8.5pt; font-weight: 600; text-align:right;">Monto</th>
                             </tr>
                         </thead>
@@ -4234,12 +4747,12 @@ function downloadMonthlyReport() {
     const periodText = isAllMonths ? `${trans.period}: ${selYear}` : `${trans.months[selMonth]} ${selYear}`;
     const balanceLabel = isAllMonths ? trans.annualBalance : trans.monthlyBalance;
     
-    // Detectar si es dispositivo mÓvil
+    // Detectar si es dispositivo movil
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
                      || (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
     
     if (isMobile) {
-        // === MÓVIL: Abrir ventana nueva con documento HTML completo e independiente ===
+        // === MoVIL: Abrir ventana nueva con documento HTML completo e independiente ===
         const reportHTML = `<!DOCTYPE html>
 <html lang="${currentLang}">
 <head>
@@ -4360,7 +4873,7 @@ function downloadMonthlyReport() {
         @media print {
             body { padding: 0; }
         }
-        /* Ocultar widgets y elementos de traducción inyectados por el navegador */
+        /* Ocultar widgets y elementos de traduccion inyectados por el navegador */
         .skiptranslate,
         #google_translate_element,
         .goog-te-banner-frame,
@@ -4429,7 +4942,7 @@ function downloadMonthlyReport() {
         if (reportWindow) {
             reportWindow.document.write(reportHTML);
             reportWindow.document.close();
-            showToast('Reporte generado. Se abrió en una nueva pestaña.', 'success');
+            showToast('Reporte generado. Se abrio en una nueva pestana.', 'success');
         } else {
             // Fallback si el navegador bloquea pop-ups
             const blob = new Blob([reportHTML], { type: 'text/html' });
@@ -4439,11 +4952,11 @@ function downloadMonthlyReport() {
             link.target = '_blank';
             link.click();
             URL.revokeObjectURL(url);
-            showToast('Reporte generado. Si no se abrió, permite las ventanas emergentes.', 'info');
+            showToast('Reporte generado. Si no se abrio, permite las ventanas emergentes.', 'info');
         }
         
     } else {
-        // === PC/ESCRITORIO: Método original directo con window.print() ===
+        // === PC/ESCRITORIO: Metodo original directo con window.print() ===
         const printContainer = document.getElementById('print-report-container');
         printContainer.innerHTML = `
             <div class="print-report-wrapper">
@@ -4486,16 +4999,16 @@ function downloadMonthlyReport() {
             printContainer.innerHTML = '';
         }, 100);
         
-        showToast('Diálogo de impresión (PDF) abierto.', 'success');
+        showToast('Di!logo de impresion (PDF) abierto.', 'success');
     }
 }
 
-// 4. Importar Respaldo (Selección y Parseo)
+// 4. Importar Respaldo (Seleccion y Parseo)
 function handleImportCsvFile(e) {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Validar extensión
+    // Validar extension
     if (!file.name.endsWith('.csv')) {
         showToast('El archivo seleccionado debe ser de formato CSV.', 'error');
         return;
@@ -4515,20 +5028,20 @@ function handleImportCsvFile(e) {
 function parseAndValidateCsv(content) {
     parsedCsvTransactionsToImport = [];
     
-    // Separar líneas limpiando retornos de carro
+    // Separar lineas limpiando retornos de carro
     const lines = content.split(/\r?\n/);
     if (lines.length < 2) {
-        showToast('El archivo CSV está vacío o incompleto.', 'error');
+        showToast('El archivo CSV est! vacio o incompleto.', 'error');
         return;
     }
     
-    // Analizar encabezado (primera línea)
+    // Analizar encabezado (primera linea)
     // Buscamos: fecha,concepto,tipo,categoria,monto
     const headerLine = lines[0].replace(/^\uFEFF/, '').trim().toLowerCase(); // Quitar BOM
     const headers = headerLine.split(',');
     
     if (headers.length !== 5) {
-        showToast('Formato de CSV inválido. Debe contener exactamente 5 columnas.', 'error');
+        showToast('Formato de CSV inv!lido. Debe contener exactamente 5 columnas.', 'error');
         return;
     }
     
@@ -4537,7 +5050,7 @@ function parseAndValidateCsv(content) {
     
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (!line) continue; // Saltar líneas vacías
+        if (!line) continue; // Saltar lineas vacias
         
         const row = splitCsvLine(line);
         if (row.length !== 5) {
@@ -4573,17 +5086,17 @@ function parseAndValidateCsv(content) {
     }
     
     if (validCount === 0) {
-        showToast('No se encontraron transacciones válidas en el archivo.', 'error');
+        showToast('No se encontraron transacciones v!lidas en el archivo.', 'error');
         parsedCsvTransactionsToImport = [];
         return;
     }
     
-    // Preparar texto de estadísticas en el modal
-    let statsMessage = `Se encontraron <strong>${validCount}</strong> transacciones válidas para importar.`;
+    // Preparar texto de estadisticas en el modal
+    let statsMessage = `Se encontraron <strong>${validCount}</strong> transacciones v!lidas para importar.`;
     if (errorCount > 0) {
         statsMessage += `<br><span style="color: var(--expense-color);">Se omitieron <strong>${errorCount}</strong> filas debido a errores de formato.</span>`;
     }
-    statsMessage += `<br><br>¿Estás seguro de que deseas proceder? Los datos actuales del navegador serán reemplazados por completo.`;
+    statsMessage += `<br><br>?Est!s seguro de que deseas proceder? Los datos actuales del navegador ser!n reemplazados por completo.`;
     
     importStatsText.innerHTML = statsMessage;
     openModal(modalImport);
@@ -4596,7 +5109,7 @@ function executeImportCsv() {
     transactions = parsedCsvTransactionsToImport;
     saveTransactions();
     
-    // Guardar timestamp de última importación
+    // Guardar timestamp de ultima importacion
     localStorage.setItem('ultimaImportacion', new Date().toISOString());
     
     // Actualizar filtros
@@ -4658,7 +5171,7 @@ function escapeCSVField(val) {
     return str;
 }
 
-// Parsea una línea de CSV teniendo en cuenta campos con comillas y comas internas
+// Parsea una linea de CSV teniendo en cuenta campos con comillas y comas internas
 function splitCsvLine(line) {
     const result = [];
     let curVal = '';
@@ -4726,7 +5239,7 @@ function showToast(message, type = 'success') {
     
     container.appendChild(toast);
     
-    // Desvanecer y remover después de 3s
+    // Desvanecer y remover despues de 3s
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateY(10px)';
@@ -4739,7 +5252,7 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// --- SISTEMA DE CATEGORÍAS PERSONALIZABLES ---
+// --- SISTEMA DE CATEGORiAS PERSONALIZABLES ---
 
 function renderCategoryDatalists() {
     const tDatalist = document.getElementById('t-category-list');
@@ -4771,7 +5284,7 @@ function renderCategoryManagerList() {
     const currentList = currentCategoryModule === 'tesoreria' ? treasuryCategories : personalCategories;
     
     if (currentList.length === 0) {
-        listContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 9.5pt; padding: 15px 0;">No hay categorías configuradas.</p>';
+        listContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 9.5pt; padding: 15px 0;">No hay categorias configuradas.</p>';
         return;
     }
     
@@ -4828,7 +5341,7 @@ function editCategoryInManager(idx) {
     
     nameInput.value = cat.name;
     indexInput.value = idx;
-    formTitle.textContent = 'Editar Categoría';
+    formTitle.textContent = 'Editar Categoria';
     submitBtnSpan.textContent = 'Guardar';
     
     selectMcColor(cat.color);
@@ -4854,7 +5367,7 @@ async function deleteCategoryInManager(idx) {
     render();
     renderPersonalFinances();
     
-    showToast(`Categoría "${catName}" eliminada con éxito.`, 'success');
+    showToast(`Categoria "${catName}" eliminada con exito.`, 'success');
 }
 
 async function handleMcCategorySubmit(e) {
@@ -4874,13 +5387,13 @@ async function handleMcCategorySubmit(e) {
     
     const exists = currentList.some((cat, i) => cat.name.toLowerCase() === name.toLowerCase() && i !== idx);
     if (exists) {
-        showToast('Ya existe una categoría con ese nombre.', 'error');
+        showToast('Ya existe una categoria con ese nombre.', 'error');
         return;
     }
     
     if (idx === -1) {
         currentList.push({ name, color });
-        showToast(`Categoría "${name}" agregada con éxito.`, 'success');
+        showToast(`Categoria "${name}" agregada con exito.`, 'success');
     } else {
         const oldName = currentList[idx].name;
         currentList[idx] = { name, color };
@@ -4894,7 +5407,7 @@ async function handleMcCategorySubmit(e) {
                 if (pe.categoria === oldName) pe.categoria = name;
             });
         }
-        showToast(`Categoría "${name}" actualizada con éxito.`, 'success');
+        showToast(`Categoria "${name}" actualizada con exito.`, 'success');
     }
     
     if (currentCategoryModule === 'tesoreria') {
@@ -4920,7 +5433,7 @@ function resetMcForm() {
     
     if (nameInput) nameInput.value = '';
     if (indexInput) indexInput.value = '-1';
-    if (formTitle) formTitle.textContent = 'Agregar Nueva Categoría';
+    if (formTitle) formTitle.textContent = 'Agregar Nueva Categoria';
     if (submitBtnSpan) submitBtnSpan.textContent = 'Agregar';
     
     const colors = [
@@ -4973,22 +5486,22 @@ function selectMcColor(color) {
 }
 
 function renderPfCharts() {
-    // Verificar si Chart.js está cargado
+    // Verificar si Chart.js est! cargado
     if (typeof Chart === 'undefined') return;
     
-    // Obtener variables de períododo
+    // Obtener variables de periododo
     const isAllMonths = pfFilterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(pfFilterMonth.value);
     const selYear = parseInt(pfFilterYear.value);
     
     // ----------------------------------------------------
-    // 1. CONFIGURACIÓN DEL GRÁFICO DE DONA (DONUT)
+    // 1. CONFIGURACIoN DEL GRaFICO DE DONA (DONUT)
     // ----------------------------------------------------
     const donutCanvas = document.getElementById('pf-donut-chart');
     const donutEmpty = document.getElementById('pf-donut-empty');
     
     if (donutCanvas) {
-        // Filtrar gastos del períododo seleccionado
+        // Filtrar gastos del periododo seleccionado
         const currentPeriodExpenses = personalExpenses.filter(e => {
             if (!e.fecha) return false;
             const [y, m] = e.fecha.split('-').map(Number);
@@ -5008,7 +5521,7 @@ function renderPfCharts() {
             if (donutEmpty) donutEmpty.classList.add('hidden-element');
             donutCanvas.style.display = 'block';
             
-            // Agrupar por categoría
+            // Agrupar por categoria
             const grouped = {};
             currentPeriodExpenses.forEach(e => {
                 const catName = e.categoria || 'Otros';
@@ -5074,7 +5587,7 @@ function renderPfCharts() {
     }
     
     // ----------------------------------------------------
-    // 2. CONFIGURACIÓN DEL GRÁFICO DE BARRAS COMPARATIVO
+    // 2. CONFIGURACIoN DEL GRaFICO DE BARRAS COMPARATIVO
     // ----------------------------------------------------
     const barCanvas = document.getElementById('pf-bar-chart');
     if (barCanvas) {
@@ -5083,7 +5596,7 @@ function renderPfCharts() {
             pfBarChartInstance = null;
         }
         
-        // Calcular ingresos y gastos mensuales para el aÑo seleccionado
+        // Calcular ingresos y gastos mensuales para el aio seleccionado
         const monthlyIncomes = Array(12).fill(0);
         const monthlyExpenses = Array(12).fill(0);
         
@@ -5199,7 +5712,7 @@ function handlePfConceptInput() {
         return;
     }
     
-    // Obtener conceptos únicos de los valores por defecto
+    // Obtener conceptos unicos de los valores por defecto
     const conceptMap = new Map();
     DEFAULT_PF_CONCEPT_CATEGORIES.forEach(item => {
         conceptMap.set(normalizeText(item.concepto), {
@@ -5224,7 +5737,7 @@ function handlePfConceptInput() {
     // Buscar coincidencias parciales con el texto normalizado
     const matches = uniqueConcepts.filter(item => 
         normalizeText(item.original).includes(valNorm)
-    ).slice(0, 5); // Máximo 5 sugerencias
+    ).slice(0, 5); // M!ximo 5 sugerencias
     
     if (matches.length > 0) {
         matches.forEach(match => {
@@ -5249,14 +5762,14 @@ function handlePfConceptInput() {
                 if (pfCategory) pfCategory.value = match.categoria;
                 userEditedPfCategory = false; // Resetear bandera
                 closePfAutocomplete();
-                showToast('Categoría autocompletada', 'info');
+                showToast('Categoria autocompletada', 'info');
             });
             
             pfAutocompleteList.appendChild(div);
         });
     }
     
-    // Autocompletado directo en el campo categoría por palabras clave
+    // Autocompletado directo en el campo categoria por palabras clave
     if (!userEditedPfCategory && pfCategory) {
         const bestMatch = uniqueConcepts.find(item => normalizeText(item.original).startsWith(valNorm)) ||
                           uniqueConcepts.find(item => normalizeText(item.original).includes(valNorm));
@@ -5281,22 +5794,22 @@ function handlePfConceptInput() {
 }
 
 function renderTCharts() {
-    // Verificar si Chart.js está cargado
+    // Verificar si Chart.js est! cargado
     if (typeof Chart === 'undefined') return;
     
-    // Obtener variables de períododo
+    // Obtener variables de periododo
     const isAllMonths = filterMonth.value === 'all';
     const selMonth = isAllMonths ? null : parseInt(filterMonth.value);
     const selYear = parseInt(filterYear.value);
     
     // ----------------------------------------------------
-    // 1. CONFIGURACIÓN DEL GRÁFICO DE DONA (DONUT)
+    // 1. CONFIGURACIoN DEL GRaFICO DE DONA (DONUT)
     // ----------------------------------------------------
     const donutCanvas = document.getElementById('t-donut-chart');
     const donutEmpty = document.getElementById('t-donut-empty');
     
     if (donutCanvas) {
-        // Filtrar transacciones de gastos del períododo seleccionado
+        // Filtrar transacciones de gastos del periododo seleccionado
         const currentPeriodExpenses = transactions.filter(t => {
             if (!t.fecha || t.tipo !== 'gasto') return false;
             const [y, m] = t.fecha.split('-').map(Number);
@@ -5316,7 +5829,7 @@ function renderTCharts() {
             if (donutEmpty) donutEmpty.classList.add('hidden-element');
             donutCanvas.style.display = 'block';
             
-            // Agrupar por categoría
+            // Agrupar por categoria
             const grouped = {};
             currentPeriodExpenses.forEach(t => {
                 const catName = t.categoria || 'Otros';
@@ -5382,7 +5895,7 @@ function renderTCharts() {
     }
     
     // ----------------------------------------------------
-    // 2. CONFIGURACIÓN DEL GRÁFICO DE LÍNEA DE TENDENCIA
+    // 2. CONFIGURACIoN DEL GRaFICO DE LiNEA DE TENDENCIA
     // ----------------------------------------------------
     const barCanvas = document.getElementById('t-bar-chart');
     if (barCanvas) {
@@ -5391,7 +5904,7 @@ function renderTCharts() {
             tBarChartInstance = null;
         }
         
-        // Calcular ingresos y gastos mensuales para el aÑo seleccionado
+        // Calcular ingresos y gastos mensuales para el aio seleccionado
         const monthlyNet = Array(12).fill(0);
         
         // Cargar montos mensuales de transacciones (Ingresos - Gastos)
@@ -5496,11 +6009,6 @@ function renderTCharts() {
 
 // --- COPILOT DE FINANZAS PERSONALES LOGIC ---
 
-let copilotMessages = [];
-
-// Clave API por defecto provista por el usuario para pruebas rápidas
-const DEFAULT_GEMINI_KEY = "";
-
 function initCopilot() {
     const btnToggle = document.getElementById('btn-pf-copilot-toggle');
     const btnClose = document.getElementById('btn-copilot-close');
@@ -5551,10 +6059,10 @@ function initCopilot() {
             const keyVal = inputKey.value.trim();
             if (keyVal) {
                 localStorage.setItem('copilot_api_key', keyVal);
-                showToast('Clave API guardada con éxito.', 'success');
+                showToast('Clave API guardada con exito.', 'success');
             } else {
                 localStorage.removeItem('copilot_api_key');
-                showToast('Clave API eliminada. Se usará el motor local.', 'info');
+                showToast('Clave API eliminada. Se usar! el motor local.', 'info');
             }
             updateKeyStatusText();
             const panel = document.getElementById('copilot-settings-panel');
@@ -5575,10 +6083,10 @@ function updateKeyStatusText() {
     if (!statusText) return;
     const currentKey = localStorage.getItem('copilot_api_key');
     if (currentKey) {
-        statusText.textContent = "✔️ Clave API activa. Modo IA inteligente habilitado.";
+        statusText.textContent = " Clave API activa. Modo IA inteligente habilitado.";
         statusText.style.color = "#10b981"; // verde
     } else {
-        statusText.textContent = "⚠️ Sin Clave API. Usando Modo Local básico.";
+        statusText.textContent = "u Sin Clave API. Usando Modo Local b!sico.";
         statusText.style.color = "#f59e0b"; // naranja
     }
 }
@@ -5619,7 +6127,7 @@ function updateCopilotVisibility() {
     } else {
         copilotContainer.classList.add('hidden-element');
         document.body.classList.remove('has-copilot');
-        // Asegurar que el chat está cerrado
+        // Asegurar que el chat est! cerrado
         copilotContainer.classList.remove('active');
         const chatIcon = document.querySelector('.btn-pf-copilot-toggle .chat-icon');
         const closeIcon = document.querySelector('.btn-pf-copilot-toggle .close-icon');
@@ -5627,7 +6135,7 @@ function updateCopilotVisibility() {
         if (closeIcon) closeIcon.classList.add('hidden-element');
     }
     
-    // Sincronizar también la visibilidad del botón de scroll-to-top
+    // Sincronizar tambien la visibilidad del boton de scroll-to-top
     updateScrollTopButtonVisibility();
 }
 
@@ -5650,13 +6158,13 @@ function resetCopilotHistory() {
     container.innerHTML = '';
     copilotMessages = [];
     
-    const greetingText = `¡Hola! Soy tu **Copilot de Finanzas Personales** 🤖.
-Puedo analizar tus ingresos y gastos registrados de este mes para darte consejos prácticos de ahorro y responder tus preguntas.
+    const greetingText = `!Hola! Soy tu **Copilot de Finanzas Personales** a.
+Puedo analizar tus ingresos y gastos registrados de este mes para darte consejos pr!cticos de ahorro y responder tus preguntas.
 
 **Prueba a preguntarme:**
-* *¿Cuál es mi saldo disponible?*
-* *¿Cuánto dinero puedo gastar en salidas en base a mi saldo?*
-* *¿Cuánto he gastado este mes y cuánto tengo pendiente?*`;
+* *?Cu!l es mi saldo disponible?*
+* *?Cu!nto dinero puedo gastar en salidas en base a mi saldo?*
+* *?Cu!nto he gastado este mes y cu!nto tengo pendiente?*`;
     
     appendCopilotMessage('assistant', greetingText);
 }
@@ -5673,7 +6181,7 @@ function appendCopilotMessage(sender, text) {
     const bubble = document.createElement('div');
     bubble.className = 'copilot-message-bubble';
     
-    // Parseo básico de negritas **texto** a <strong>texto</strong> y saltos de línea
+    // Parseo b!sico de negritas **texto** a <strong>texto</strong> y saltos de linea
     let formattedText = text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>');
@@ -5767,7 +6275,7 @@ async function handleCopilotSendMessage(e) {
     let currentIncome = 0;
     let periodName = "";
     if (isAllMonths) {
-        periodName = `Todo el año ${selYear}`;
+        periodName = `Todo el ano ${selYear}`;
         let annualSum = 0;
         Object.keys(personalIncomes).forEach(key => {
             if (key.startsWith(`${selYear}-`)) {
@@ -5800,13 +6308,13 @@ async function handleCopilotSendMessage(e) {
                 tipo: e.tipo,
                 estado: e.estado,
                 fecha: e.fecha,
-                categoria: e.categoria || 'Sin categoría'
+                categoria: e.categoria || 'Sin categoria'
             }));
             
             const systemPrompt = `Eres un asesor financiero personal experto e inteligente para el usuario.
-Tu tarea es responder preguntas personalizadas sobre su presupuesto, ingresos, gastos y saldo restante para el período seleccionado.
-A continuación se proporciona la información financiera en tiempo real extraída del sistema de su navegador:
-- Período seleccionado: ${periodName}
+Tu tarea es responder preguntas personalizadas sobre su presupuesto, ingresos, gastos y saldo restante para el periodo seleccionado.
+A continuacion se proporciona la informacion financiera en tiempo real extraida del sistema de su navegador:
+- Periodo seleccionado: ${periodName}
 - Ingreso/Presupuesto del mes: RD$ ${currentIncome.toFixed(2)}
 - Total Gastado (Ya Pagado): RD$ ${totalPaid.toFixed(2)}
 - Total Pendiente por Pagar: RD$ ${totalPending.toFixed(2)}
@@ -5815,32 +6323,32 @@ A continuación se proporciona la información financiera en tiempo real extraí
 - Lista de Gastos registrados: ${JSON.stringify(expensesListCompact)}
 
 Reglas de comportamiento:
-1. Responde siempre en español, con un tono amable, profesional, conciso y motivador.
-2. Da respuestas breves y directas, de máximo 3 o 4 oraciones a menos que te soliciten un desglose.
+1. Responde siempre en espanol, con un tono amable, profesional, conciso y motivador.
+2. Da respuestas breves y directas, de m!ximo 3 o 4 oraciones a menos que te soliciten un desglose.
 3. Utiliza el formato de moneda dominicana "RD$ X,XXX.XX" para los montos.
-4. Si el usuario te pregunta cosas del tipo "¿Cuánto dinero puedo gastar en salidas en base a mi saldo disponible?", analiza:
+4. Si el usuario te pregunta cosas del tipo "?Cu!nto dinero puedo gastar en salidas en base a mi saldo disponible?", analiza:
    - Su saldo disponible actual.
    - Si tiene gastos pendientes de pago importantes (que reduzcan su margen real).
-   - Recomienda un límite prudente para esa categoría (por ejemplo, destinar el 10-15% del saldo disponible para no comprometer el presupuesto) y justifica la respuesta con números.
+   - Recomienda un limite prudente para esa categoria (por ejemplo, destinar el 10-15% del saldo disponible para no comprometer el presupuesto) y justifica la respuesta con numeros.
 5. Nunca aludas a datos que no existan en el contexto proporcionado ni inventes transacciones.
-6. Si te preguntan sobre el módulo de Tesorería, aclara de forma atenta que estás diseñado exclusivamente para responder sobre el módulo de Finanzas Personales.`;
+6. Si te preguntan sobre el modulo de Tesoreria, aclara de forma atenta que est!s disenado exclusivamente para responder sobre el modulo de Finanzas Personales.`;
 
             const reply = await callGeminiAPI(apiKey, systemPrompt, text);
             appendCopilotMessage('assistant', reply);
             
         } else {
-            // --- MODO LOCAL BÁSICO (REGLAS Y REGEX) ---
+            // --- MODO LOCAL BaSICO (REGLAS Y REGEX) ---
             
-            // Simular pequeña latencia para que se sienta interactivo
+            // Simular pequena latencia para que se sienta interactivo
             await new Promise(resolve => setTimeout(resolve, 800));
             
             const lowerText = text.toLowerCase();
             let reply = "";
             
             if (lowerText.includes('saldo') || lowerText.includes('disponible') || lowerText.includes('balance') || lowerText.includes('cuanto tengo')) {
-                reply = `Para el período **${periodName}**, tu presupuesto de ingresos es **${formatCurrency(currentIncome)}**.\n\n` + 
+                reply = `Para el periodo **${periodName}**, tu presupuesto de ingresos es **${formatCurrency(currentIncome)}**.\n\n` + 
                         `Tu saldo disponible actual es **${formatCurrency(balance)}** (Ingreso mensual menos gastos ya pagados).\n` +
-                        `Si consideras también los gastos pendientes (${formatCurrency(totalPending)}), tu balance restante neto al final del mes sería **${formatCurrency(currentIncome - totalSpent)}**.`;
+                        `Si consideras tambien los gastos pendientes (${formatCurrency(totalPending)}), tu balance restante neto al final del mes seria **${formatCurrency(currentIncome - totalSpent)}**.`;
                         
             } else if (lowerText.includes('gasto') || lowerText.includes('gastado') || lowerText.includes('gastos') || lowerText.includes('pagar')) {
                 reply = `Durante **${periodName}**, tienes registrados un total de **${formatCurrency(totalSpent)}** en gastos:\n` +
@@ -5848,10 +6356,10 @@ Reglas de comportamiento:
                         `- **${formatCurrency(totalPending)}** pendientes de pago.`;
                         
             } else if (lowerText.includes('salida') || lowerText.includes('salidas') || lowerText.includes('comida') || lowerText.includes('supermercado') || lowerText.includes('entretenimiento') || lowerText.includes('gastar')) {
-                // Recomendación de salidas basada en el saldo
+                // Recomendacion de salidas basada en el saldo
                 const maxSalidasRecomendado = Math.max(0, balance * 0.15); // 15% del saldo disponible
                 
-                // Buscar si hay gastos previos en categorías de salidas o comida
+                // Buscar si hay gastos previos en categorias de salidas o comida
                 const gastosCategoria = filteredExpenses.filter(e => {
                     const cat = (e.categoria || '').toLowerCase();
                     const con = e.concepto.toLowerCase();
@@ -5860,24 +6368,24 @@ Reglas de comportamiento:
                 
                 const totalCategoria = gastosCategoria.reduce((sum, e) => sum + (parseFloat(e.monto) || 0), 0);
                 
-                reply = `Tu saldo disponible es **${formatCurrency(balance)}**. Te sugiero destinar como máximo un **15%** de este saldo para gastos discrecionales (salidas, comida fuera, entretenimiento), lo cual equivale a **${formatCurrency(maxSalidasRecomendado)}**.\n\n` +
+                reply = `Tu saldo disponible es **${formatCurrency(balance)}**. Te sugiero destinar como m!ximo un **15%** de este saldo para gastos discrecionales (salidas, comida fuera, entretenimiento), lo cual equivale a **${formatCurrency(maxSalidasRecomendado)}**.\n\n` +
                         `Actualmente tienes registrados **${formatCurrency(totalCategoria)}** en este tipo de conceptos este mes.\n\n` +
-                        `*Recomendación:* Si planeas salir, te sugiero un límite de **${formatCurrency(Math.max(0, maxSalidasRecomendado - totalCategoria))}** para no afectar el pago de tus gastos pendientes (${formatCurrency(totalPending)}).`;
+                        `*Recomendacion:* Si planeas salir, te sugiero un limite de **${formatCurrency(Math.max(0, maxSalidasRecomendado - totalCategoria))}** para no afectar el pago de tus gastos pendientes (${formatCurrency(totalPending)}).`;
                         
             } else if (lowerText.includes('ayuda') || lowerText.includes('hola') || lowerText.includes('buenos dias') || lowerText.includes('buenas tardes')) {
-                reply = `¡Hola! Estoy listo para ayudarte con tu presupuesto de **${periodName}**.\n\n` +
+                reply = `!Hola! Estoy listo para ayudarte con tu presupuesto de **${periodName}**.\n\n` +
                         `Puedes hacerme preguntas sencillas sobre tu **'saldo'**, tus **'gastos'**, o pedirme recomendaciones de **'salidas'**.\n\n` +
-                        `*Nota:* Para habilitar mi motor de Inteligencia Artificial avanzado (capaz de razonar lógicamente sobre cualquier duda), por favor haz clic en el engranaje ⚙️ de arriba e introduce tu clave API de Gemini.`;
+                        `*Nota:* Para habilitar mi motor de Inteligencia Artificial avanzado (capaz de razonar logicamente sobre cualquier duda), por favor haz clic en el engranaje ui de arriba e introduce tu clave API de Gemini.`;
             } else {
                 reply = `Entiendo tu consulta sobre tus finanzas en **${periodName}**, pero no puedo darte una respuesta detallada con mi motor local.\n\n` +
-                        `**Por favor, configura tu API Key de Gemini** haciendo clic en el engranaje ⚙️ de la cabecera. Es gratuita y me permitirá usar inteligencia artificial avanzada para analizar detalladamente tu consulta y darte una recomendación experta.`;
+                        `**Por favor, configura tu API Key de Gemini** haciendo clic en el engranaje ui de la cabecera. Es gratuita y me permitir! usar inteligencia artificial avanzada para analizar detalladamente tu consulta y darte una recomendacion experta.`;
             }
             
             appendCopilotMessage('assistant', reply);
         }
     } catch (err) {
         removeTypingBubble();
-        appendCopilotMessage('assistant', `❌ Ocurrió un error al procesar tu consulta: *${err.message}*.\n\nPor favor, verifica tu conexión a Internet o revisa que tu clave API de Gemini configurada sea correcta.`);
+        appendCopilotMessage('assistant', ` Ocurrio un error al procesar tu consulta: *${err.message}*.\n\nPor favor, verifica tu conexion a Internet o revisa que tu clave API de Gemini configurada sea correcta.`);
     } finally {
         messageInput.disabled = false;
         messageInput.focus();
@@ -5934,7 +6442,7 @@ async function callGeminiAPI(apiKey, prompt, userMessage) {
     const data = await response.json();
     const parts = data.candidates?.[0]?.content?.parts;
     if (!parts || parts.length === 0) {
-        throw new Error('No se recibió texto del modelo.');
+        throw new Error('No se recibio texto del modelo.');
     }
     
     const responseText = parts.map(p => p.text).join('');
@@ -5942,10 +6450,6 @@ async function callGeminiAPI(apiKey, prompt, userMessage) {
 }
 
 // --- SELECTOR DE IDIOMA PERSONALIZADO (GOOGLE TRANSLATE - COOKIE + RELOAD) ---
-const LANG_NAMES = {
-    es: 'Español', en: 'English', fr: 'Français',
-    pt: 'Português', it: 'Italiano', de: 'Deutsch'
-};
 
 function getCurrentLangFromCookie() {
     const match = document.cookie.match(/googtrans=\/es\/([a-z]+)/);
@@ -5953,7 +6457,7 @@ function getCurrentLangFromCookie() {
 }
 
 function changeGoogleTranslateLanguage(langCode) {
-    // Escribir cookies en path raíz y dominio local
+    // Escribir cookies en path raiz y dominio local
     document.cookie = `googtrans=/es/${langCode}; path=/;`;
     document.cookie = `googtrans=/es/${langCode}; path=/; domain=${window.location.hostname};`;
 
@@ -5961,7 +6465,7 @@ function changeGoogleTranslateLanguage(langCode) {
     const langName = LANG_NAMES[langCode] || langCode.toUpperCase();
     showToast(`Aplicando idioma: ${langName}...`, 'info');
 
-    // Pequeño delay para que el toast sea visible, luego recargar
+    // Pequeno delay para que el toast sea visible, luego recargar
     setTimeout(() => {
         window.location.reload();
     }, 600);
@@ -5992,7 +6496,7 @@ function initCustomLanguageSelector() {
 
     if (!triggerBtn || !dropdown) return;
 
-    // Sincronizar UI con el idioma activo (leído de la cookie)
+    // Sincronizar UI con el idioma activo (leido de la cookie)
     syncLanguageSelectorUI();
 
     triggerBtn.addEventListener('click', (e) => {
