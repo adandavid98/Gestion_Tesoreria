@@ -3423,40 +3423,23 @@ function setupEventListeners() {
                     Conectando con Google...
                 `;
 
-                try {
-                    await signInWithPopup(auth, googleProvider);
-                } catch (popupError) {
-                    if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
-                        console.warn("Popup bloqueado o cancelado, intentando redireccion:", popupError);
-                        showToast('Ventana emergente bloqueada. Redirigiendo a Google...', 'info');
-                        await signInWithRedirect(auth, googleProvider);
-                        return;
-                    }
-                    throw popupError;
-                }
+                // Usar redirección directa para evitar bloqueos silenciosos de popups en Brave/Safari/Móviles
+                await signInWithRedirect(auth, googleProvider);
+                
             } catch (error) {
-                console.error("Error al iniciar sesion con Google: ", error);
-                if (error.code === 'auth/popup-closed-by-user') {
-                    showToast('Se cerro la ventana de Google. Intenta de nuevo.', 'warning');
-                } else if (error.code === 'auth/popup-blocked') {
-                    showToast('Ventana emergente bloqueada. Redirigiendo a Google...', 'info');
-                    try {
-                        await signInWithRedirect(auth, googleProvider);
-                    } catch (rErr) {
-                        alert('No se pudo iniciar sesion. Permite ventanas emergentes en tu navegador.');
-                    }
-                } else if (error.code === 'auth/unauthorized-domain') {
+                console.error("Error al iniciar sesión con Google: ", error);
+                if (error.code === 'auth/unauthorized-domain') {
                     alert('Dominio no autorizado: ' + window.location.hostname + '. Agrega este dominio en Firebase Console > Authentication > Authorized domains.');
-                } else if (error.code === 'auth/operation-not-supported-in-this-environment') {
-                    alert('El protocolo actual no soporta autenticacion directa. Abre la aplicacion desde un servidor web (http://localhost:... o https://).');
                 } else {
-                    alert('Error de Google Sign-In [' + (error.code || 'desconocido') + ']: ' + (error.message || ''));
+                    alert('Aviso de Google Sign-In: ' + (error.message || error.code || 'Error al conectar'));
                 }
-            } finally {
+                
+                // Restaurar botón en caso de error inmediato
                 btnLoginGoogle.disabled = false;
                 btnLoginGoogle.style.opacity = '1';
                 btnLoginGoogle.innerHTML = defaultGoogleBtnHtml;
             }
+            // No restauramos el botón en el bloque finally si hay éxito, porque la página se redirigirá.
         });
     }
     
