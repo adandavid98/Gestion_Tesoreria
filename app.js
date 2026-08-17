@@ -1115,34 +1115,40 @@ async function saveTransactions() {
     try {
         localStorage.setItem('transacciones', JSON.stringify(transactions));
         localStorage.setItem('treasury_categories', JSON.stringify(treasuryCategories));
+        localStorage.setItem('treasury_logs', JSON.stringify(activeTreasurySpace.logs || []));
     } catch (e) {
         console.error('Error guardando transacciones en localStorage', e);
     }
     
     if (currentUser && db) {
         try {
-            if (activeTreasurySpace.hash) {
-                const spaceDocRef = doc(db, 'shared_tesoreria', activeTreasurySpace.hash);
+            const passToSync = activeTreasurySpace.hash ? activeTreasurySpace.hash : (activeTreasurySpace.passphrase ? await hashPassphrase('tesoreria', activeTreasurySpace.passphrase) : '');
+            if (passToSync) {
+                const spaceDocRef = doc(db, 'shared_tesoreria', passToSync);
                 const updateObj = {
-                    transactions: transactions,
-                    treasuryCategories: treasuryCategories,
+                    transactions: sanitizeData(transactions),
+                    treasuryCategories: sanitizeData(treasuryCategories),
                     logs: activeTreasurySpace.logs || [],
                     updatedAt: new Date().toISOString()
                 };
                 if (activeTreasurySpace.isOwner && activeTreasurySpace.spaceName && activeTreasurySpace.spaceName !== 'Espacio Compartido') {
                     updateObj.spaceName = activeTreasurySpace.spaceName;
                 }
-                await setDoc(spaceDocRef, updateObj, { merge: true });
-            } else {
-                const userDocRef = doc(db, 'users', currentUser.uid);
-                await setDoc(userDocRef, {
-                    transactions: transactions,
-                    treasuryCategories: treasuryCategories,
-                    treasuryLogs: activeTreasurySpace.logs || [],
-                    logs: activeTreasurySpace.logs || [],
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
+                try {
+                    await setDoc(spaceDocRef, updateObj, { merge: true });
+                } catch (sharedErr) {
+                    console.warn("Aviso al sincronizar en shared_tesoreria:", sharedErr);
+                }
             }
+            
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            await setDoc(userDocRef, {
+                transactions: sanitizeData(transactions),
+                treasuryCategories: sanitizeData(treasuryCategories),
+                treasuryLogs: activeTreasurySpace.logs || [],
+                logs: activeTreasurySpace.logs || [],
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
         } catch (error) {
             console.error("Error al guardar en Firestore: ", error);
             showToast('Error al guardar datos en la nube.', 'error');
@@ -1634,36 +1640,42 @@ async function savePersonalFinances() {
         localStorage.setItem('pf_expenses', JSON.stringify(personalExpenses));
         localStorage.setItem('pf_incomes', JSON.stringify(personalIncomes));
         localStorage.setItem('personal_categories', JSON.stringify(personalCategories));
+        localStorage.setItem('pf_logs', JSON.stringify(activePersonalSpace.logs || []));
     } catch (e) {
         console.error('Error guardando en localStorage', e);
     }
     
     if (currentUser && db) {
         try {
-            if (activePersonalSpace.hash) {
-                const spaceDocRef = doc(db, 'shared_personales', activePersonalSpace.hash);
+            const passToSync = activePersonalSpace.hash ? activePersonalSpace.hash : (activePersonalSpace.passphrase ? await hashPassphrase('personales', activePersonalSpace.passphrase) : '');
+            if (passToSync) {
+                const spaceDocRef = doc(db, 'shared_personales', passToSync);
                 const updateObj = {
-                    personalExpenses: personalExpenses,
-                    personalIncomes: personalIncomes,
-                    personalCategories: personalCategories,
+                    personalExpenses: sanitizeData(personalExpenses),
+                    personalIncomes: sanitizeData(personalIncomes),
+                    personalCategories: sanitizeData(personalCategories),
                     logs: activePersonalSpace.logs || [],
                     updatedAt: new Date().toISOString()
                 };
                 if (activePersonalSpace.isOwner && activePersonalSpace.spaceName && activePersonalSpace.spaceName !== 'Espacio Compartido') {
                     updateObj.spaceName = activePersonalSpace.spaceName;
                 }
-                await setDoc(spaceDocRef, updateObj, { merge: true });
-            } else {
-                const userDocRef = doc(db, 'users', currentUser.uid);
-                await setDoc(userDocRef, {
-                    personalExpenses: personalExpenses,
-                    personalIncomes: personalIncomes,
-                    personalCategories: personalCategories,
-                    personalLogs: activePersonalSpace.logs || [],
-                    logs: activePersonalSpace.logs || [],
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
+                try {
+                    await setDoc(spaceDocRef, updateObj, { merge: true });
+                } catch (sharedErr) {
+                    console.warn("Aviso al sincronizar en shared_personales:", sharedErr);
+                }
             }
+            
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            await setDoc(userDocRef, {
+                personalExpenses: sanitizeData(personalExpenses),
+                personalIncomes: sanitizeData(personalIncomes),
+                personalCategories: sanitizeData(personalCategories),
+                personalLogs: activePersonalSpace.logs || [],
+                logs: activePersonalSpace.logs || [],
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
         } catch (e) {
             console.error('Error guardando finanzas personales en Firestore', e);
             showToast('Error de sincronizacion con la nube.', 'error');
@@ -3221,6 +3233,7 @@ function setupEventListeners() {
 
                 // Validar si el espacio realmente existe en Firestore antes de permitir el acceso
                 let name = 'Espacio Compartido';
+                let spaceData = null;
                 if (db) {
                     try {
                         const collectionName = targetModule === 'tesoreria' ? 'shared_tesoreria' : 'shared_personales';
@@ -3228,16 +3241,17 @@ function setupEventListeners() {
                         const docSnap = await getDoc(spaceDocRef);
                         
                         if (!docSnap || !docSnap.exists()) {
-                            showToast('La Passphrase es incorrecta o el espacio no existe.', 'error');
+                            showToast('La Passphrase es incorrecta o el espacio aún no ha sido compartido.', 'error');
                             return; // Bloquea la conexion y creacion de espacio fantasma
                         }
 
-                        if (docSnap.data().spaceName) {
-                            name = docSnap.data().spaceName;
+                        spaceData = docSnap.data();
+                        if (spaceData && spaceData.spaceName) {
+                            name = spaceData.spaceName;
                         }
                     } catch (fetchErr) {
                         console.error("Error al validar el espacio:", fetchErr);
-                        showToast('Error al conectar con la nube.', 'error');
+                        showToast('Error al conectar con la nube: ' + (fetchErr.message || 'Sin permisos o error de red'), 'error');
                         return;
                     }
                 }
@@ -3245,11 +3259,17 @@ function setupEventListeners() {
                 // Guardar en la lista de accesos guardados del usuario
                 const savedList = userSavedWorkspaces[targetModule] || [];
                 const existingIdx = savedList.findIndex(w => w.hash === hash);
+                const effectiveUser = currentUser || auth.currentUser;
+                const isOwner = spaceData ? (
+                    (spaceData.ownerUid && effectiveUser && spaceData.ownerUid === effectiveUser.uid) ||
+                    (spaceData.ownerEmail && effectiveUser && effectiveUser.email && spaceData.ownerEmail.toLowerCase() === effectiveUser.email.toLowerCase())
+                ) : false;
+
+                const wsEntry = { hash, passphrase: passVal, name, isOwner };
                 if (existingIdx >= 0) {
-                    savedList[existingIdx].name = name;
-                    savedList[existingIdx].passphrase = passVal;
+                    savedList[existingIdx] = { ...savedList[existingIdx], ...wsEntry };
                 } else {
-                    savedList.push({ hash, passphrase: passVal, name });
+                    savedList.push(wsEntry);
                 }
                 userSavedWorkspaces[targetModule] = savedList;
 
@@ -3259,11 +3279,9 @@ function setupEventListeners() {
                     console.warn("No se pudo guardar la lista de espacios en el usuario:", saveErr);
                 }
 
-                const isOwner = (existingOwnerUid && currentUser && existingOwnerUid === currentUser.uid) ||
-                                (existingOwnerEmail && currentUser && currentUser.email && existingOwnerEmail.toLowerCase() === currentUser.email.toLowerCase());
-
                 // Activar el espacio y suscribirse en tiempo real
                 if (targetModule === 'tesoreria') {
+                    if (treasuryUnsubscribe) { treasuryUnsubscribe(); treasuryUnsubscribe = null; }
                     activeTreasurySpace = {
                         passphrase: passVal,
                         hash,
@@ -3275,7 +3293,11 @@ function setupEventListeners() {
                         logs: []
                     };
                     await setupSpaceListener('tesoreria');
+                    updateSpaceBadgeUI('tesoreria');
+                    updateModulePermissionUI('tesoreria');
+                    render();
                 } else {
+                    if (personalUnsubscribe) { personalUnsubscribe(); personalUnsubscribe = null; }
                     activePersonalSpace = {
                         passphrase: passVal,
                         hash,
@@ -3287,6 +3309,9 @@ function setupEventListeners() {
                         logs: []
                     };
                     await setupSpaceListener('personales');
+                    updateSpaceBadgeUI('personales');
+                    updateModulePermissionUI('personales');
+                    renderPersonalFinances();
                 }
 
                 if (inputPass) inputPass.value = '';
@@ -3295,7 +3320,7 @@ function setupEventListeners() {
                 showToast(`Conectado exitosamente al espacio '${name}'`, 'success');
             } catch (err) {
                 console.error("Error al acceder con passphrase:", err);
-                showToast('Ocurrio un error al procesar la frase de acceso. Intenta de nuevo.', 'error');
+                showToast('Ocurrió un error al procesar la frase de acceso. Intenta de nuevo.', 'error');
             }
         });
     }
@@ -3632,7 +3657,59 @@ function setupEventListeners() {
                                 [isTreasury ? 'treasurySpaceName' : 'personalSpaceName']: newName,
                                 updatedAt: new Date().toISOString()
                             };
-                            if (passToUse) updatePayload[isTreasury ? 'treasuryPassphrase' : 'personalPassphrase'] = passToUse;
+                            if (passToUse) {
+                                const passHash = await hashPassphrase(currentManagePassphraseModule, passToUse);
+                                updatePayload[isTreasury ? 'treasuryPassphrase' : 'personalPassphrase'] = passToUse;
+                                updatePayload[isTreasury ? 'treasuryPassphraseHash' : 'personalPassphraseHash'] = passHash;
+                                
+                                // Publicar en la colección compartida para que otros usuarios puedan conectarse
+                                const collectionName = isTreasury ? 'shared_tesoreria' : 'shared_personales';
+                                const sharedDocRef = doc(db, collectionName, passHash);
+                                const safeEmail = currentUser.email || '';
+                                const safeDisplayName = currentUser.displayName || (safeEmail ? safeEmail.split('@')[0] : 'Usuario');
+
+                                const sharedData = {
+                                    spaceName: newName,
+                                    ownerUid: currentUser.uid,
+                                    ownerEmail: safeEmail,
+                                    passphrase: passToUse,
+                                    updatedAt: new Date().toISOString(),
+                                    members: {
+                                        [currentUser.uid]: {
+                                            email: safeEmail,
+                                            displayName: safeDisplayName,
+                                            joinedAt: new Date().toISOString(),
+                                            isBlocked: false,
+                                            permissions: { allowAdd: true, allowEdit: true, allowDelete: true, isReadOnly: false }
+                                        }
+                                    },
+                                    logs: [{
+                                        id: Date.now().toString(),
+                                        timestamp: new Date().toLocaleString(),
+                                        userEmail: safeEmail || 'Usuario',
+                                        action: 'CREAR',
+                                        details: `Configuró la frase de acceso '${passToUse}' para compartir este espacio`
+                                    }]
+                                };
+
+                                if (isTreasury) {
+                                    sharedData.transactions = Array.isArray(transactions) ? sanitizeData(transactions) : [];
+                                    sharedData.treasuryCategories = Array.isArray(treasuryCategories) ? sanitizeData(treasuryCategories) : [...DEFAULT_TREASURY_CATEGORIES];
+                                } else {
+                                    sharedData.personalExpenses = Array.isArray(personalExpenses) ? sanitizeData(personalExpenses) : [];
+                                    sharedData.personalIncomes = (personalIncomes && typeof personalIncomes === 'object') ? sanitizeData(personalIncomes) : {};
+                                    sharedData.personalCategories = Array.isArray(personalCategories) ? sanitizeData(personalCategories) : [...DEFAULT_PERSONAL_CATEGORIES];
+                                }
+
+                                try {
+                                    await setDoc(sharedDocRef, sanitizeData(sharedData), { merge: true });
+                                } catch (sharedSaveErr) {
+                                    console.warn("Aviso al publicar en colección compartida:", sharedSaveErr);
+                                }
+                            } else {
+                                updatePayload[isTreasury ? 'treasuryPassphrase' : 'personalPassphrase'] = '';
+                                updatePayload[isTreasury ? 'treasuryPassphraseHash' : 'personalPassphraseHash'] = '';
+                            }
                             await setDoc(userDocRef, updatePayload, { merge: true });
                         }
                     }
