@@ -458,7 +458,7 @@
                         </svg>
                         Configurar Passphrase
                     </button>
-                    <button id="btn-pf-activity-logs" class="btn-outline">
+                    <button id="btn-pf-activity-logs" class="btn-outline" onclick="openActivityLogsModal('personales')">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                             <polyline points="14 2 14 8 20 8"/>
@@ -466,6 +466,16 @@
                             <line x1="16" y1="17" x2="8" y2="17"/>
                         </svg>
                         Logs de Actividad
+                    </button>
+                    <button id="btn-pf-archive-year" class="btn-outline">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                            <path d="M10 14l2 2 4-4"/>
+                        </svg>
+                        Cierre / Archivo Anual
                     </button>
                     <input type="file" id="pf-csv-file-input" accept=".csv, text/csv, application/vnd.ms-excel, text/plain" class="hidden-file-input" aria-hidden="true">
                     
@@ -713,7 +723,7 @@
                     </svg>
                     Configurar Passphrase
                 </button>
-                <button id="btn-activity-logs" class="btn-outline">
+                <button id="btn-activity-logs" class="btn-outline" onclick="openActivityLogsModal('tesoreria')">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                         <polyline points="14 2 14 8 20 8"/>
@@ -721,6 +731,16 @@
                         <line x1="16" y1="17" x2="8" y2="17"/>
                     </svg>
                     Logs de Actividad
+                </button>
+                <button id="btn-t-archive-year" class="btn-outline">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                        <path d="M10 14l2 2 4-4"/>
+                    </svg>
+                    Cierre / Archivo Anual
                 </button>
                 <input type="file" id="csv-file-input" accept=".csv, text/csv, application/vnd.ms-excel, text/plain" class="hidden-file-input" aria-hidden="true">
                 
@@ -1103,6 +1123,61 @@
             </div>
         </div>
     </div>
+
+    <!-- MODAL CIERRE Y ARCHIVO ANUAL -->
+    <div id="modal-archive-year" class="modal-backdrop">
+        <div class="modal-card" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="archive-modal-title">Cierre y Archivo Anual</h3>
+                <button type="button" class="btn-close-modal" id="btn-close-archive-modal" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+                    Esta herramienta te permite generar un respaldo histórico de un año específico y opcionalmente liberarlo de la base de datos activa para mantener la cuenta ligera y rápida.
+                </p>
+
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="archive-year-select" style="font-weight: 600; font-size: 0.85rem; color: var(--text-color); margin-bottom: 6px; display: block;">
+                        Selecciona el Año a Archivar:
+                    </label>
+                    <select id="archive-year-select" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); font-weight: 600; font-size: 1rem;">
+                        <!-- Opciones de años inyectadas dinámicamente -->
+                    </select>
+                </div>
+
+                <!-- Resumen de registros a archivar -->
+                <div id="archive-summary-box" style="padding: 14px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">Registros encontrados:</span>
+                        <strong id="archive-records-count" style="font-size: 0.95rem; color: var(--text-color);">0 registros</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">Monto total acumulado:</span>
+                        <strong id="archive-total-amount" style="font-size: 0.95rem; color: var(--primary-color);">RD$ 0.00</strong>
+                    </div>
+                </div>
+
+                <!-- Aviso de Seguridad -->
+                <div style="padding: 12px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--text-color); font-size: 0.82rem; line-height: 1.45; margin-bottom: 10px;">
+                    <strong style="color: #10b981; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Protección Automática:
+                    </strong>
+                    Al presionar el botón, el sistema <strong>descargará automáticamente</strong> el archivo CSV/Excel con todas las transacciones de ese año en tu dispositivo antes de aplicar el cierre.
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px;">
+                <button type="button" class="btn-neutral" id="btn-cancel-archive" style="flex: 1;">Cancelar</button>
+                <button type="button" class="btn-primary" id="btn-execute-archive" style="flex: 2; display: flex; align-items: center; justify-content: center; gap: 8px; background: #e11d48;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    <span>Descargar y Archivar Año</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- COPILOT DE FINANZAS PERSONALES -->
     <div id="pf-copilot-container" class="pf-copilot-container hidden-element">
