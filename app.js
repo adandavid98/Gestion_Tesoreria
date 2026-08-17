@@ -260,6 +260,7 @@ function updateModulePermissionUI(moduleName) {
         const btnConfig = document.getElementById('btn-config-passphrase');
         const btnImport = document.getElementById('btn-import-trigger');
         const btnClear = document.getElementById('btn-clear-data');
+        const btnArchive = document.getElementById('btn-t-archive-year');
         const submitBtn = document.querySelector('#transaction-form button[type="submit"]');
         const isOwner = activeTreasurySpace.isOwner || !activeTreasurySpace.hash;
         const allowAdd = isOwner || (activeTreasurySpace.permissions.allowAdd !== false && !activeTreasurySpace.permissions.isReadOnly);
@@ -267,6 +268,7 @@ function updateModulePermissionUI(moduleName) {
         if (btnConfig) btnConfig.style.display = isOwner ? 'inline-flex' : 'none';
         if (btnImport) btnImport.style.display = isOwner ? 'inline-flex' : 'none';
         if (btnClear) btnClear.style.display = isOwner ? 'inline-flex' : 'none';
+        if (btnArchive) btnArchive.style.display = isOwner ? 'inline-flex' : 'none';
 
         if (submitBtn) {
             submitBtn.disabled = !allowAdd;
@@ -278,6 +280,7 @@ function updateModulePermissionUI(moduleName) {
         const btnConfig = document.getElementById('btn-pf-config-passphrase');
         const btnImport = document.getElementById('btn-pf-import-trigger');
         const btnClear = document.getElementById('btn-pf-clear-data');
+        const btnPfArchive = document.getElementById('btn-pf-archive-year');
         const submitBtn = document.querySelector('#pf-expense-form button[type="submit"]');
         const isOwner = activePersonalSpace.isOwner || !activePersonalSpace.hash;
         const allowAdd = isOwner || (activePersonalSpace.permissions.allowAdd !== false && !activePersonalSpace.permissions.isReadOnly);
@@ -285,6 +288,7 @@ function updateModulePermissionUI(moduleName) {
         if (btnConfig) btnConfig.style.display = isOwner ? 'inline-flex' : 'none';
         if (btnImport) btnImport.style.display = isOwner ? 'inline-flex' : 'none';
         if (btnClear) btnClear.style.display = isOwner ? 'inline-flex' : 'none';
+        if (btnPfArchive) btnPfArchive.style.display = isOwner ? 'inline-flex' : 'none';
 
         if (submitBtn) {
             submitBtn.disabled = !allowAdd;
@@ -294,6 +298,7 @@ function updateModulePermissionUI(moduleName) {
         }
     }
 }
+
 
 // Guardar Espacios Guardados en el Perfil de Google
 async function saveSavedWorkspacesToUser() {
@@ -4331,14 +4336,24 @@ function setupEventListeners() {
 let currentArchiveModule = 'tesoreria';
 
 function openArchiveYearModal(moduleName) {
+    const isTreasury = moduleName === 'tesoreria';
+    const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
+    const isOwner = activeSpace.isOwner || !activeSpace.hash;
+
+    if (!isOwner) {
+        showToast('Acción restringida: Solo el propietario del espacio puede realizar Cierre o Archivo Anual.', 'error');
+        return;
+    }
+
     currentArchiveModule = moduleName;
     const modal = document.getElementById('modal-archive-year');
     const tag = document.getElementById('archive-module-tag');
     const select = document.getElementById('archive-year-select');
     
     if (tag) {
-        tag.textContent = moduleName === 'tesoreria' ? 'Tesorería' : 'Finanzas Personales';
+        tag.textContent = isTreasury ? 'Tesorería' : 'Finanzas Personales';
     }
+
     
     const isTreasury = moduleName === 'tesoreria';
     const sourceList = isTreasury ? transactions : personalExpenses;
