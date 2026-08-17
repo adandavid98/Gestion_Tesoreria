@@ -1125,18 +1125,18 @@
     </div>
 
     <!-- MODAL CIERRE Y ARCHIVO ANUAL -->
-    <div id="modal-archive-year" class="modal-backdrop">
-        <div class="modal-card" style="max-width: 500px;">
+    <div id="modal-archive-year" class="modal-overlay">
+        <div class="modal-container" style="max-width: 500px;">
             <div class="modal-header">
                 <h3 id="archive-modal-title">Cierre y Archivo Anual</h3>
-                <button type="button" class="btn-close-modal" id="btn-close-archive-modal" aria-label="Cerrar">&times;</button>
+                <button type="button" class="modal-close-btn" id="btn-close-archive-modal" aria-label="Cerrar">&times;</button>
             </div>
             <div class="modal-body">
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
                     Esta herramienta te permite generar un respaldo histórico de un año específico y opcionalmente liberarlo de la base de datos activa para mantener la cuenta ligera y rápida.
                 </p>
 
-                <div class="form-group" style="margin-bottom: 16px;">
+                <div class="form-group" style="margin-bottom: 12px;">
                     <label for="archive-year-select" style="font-weight: 600; font-size: 0.85rem; color: var(--text-color); margin-bottom: 6px; display: block;">
                         Selecciona el Año a Archivar:
                     </label>
@@ -1146,19 +1146,19 @@
                 </div>
 
                 <!-- Resumen de registros a archivar -->
-                <div id="archive-summary-box" style="padding: 14px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); margin-bottom: 16px;">
+                <div id="archive-summary-box" style="padding: 14px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); margin-bottom: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <span style="font-size: 0.85rem; color: var(--text-muted);">Registros encontrados:</span>
-                        <strong id="archive-records-count" style="font-size: 0.95rem; color: var(--text-color);">0 registros</strong>
+                        <strong id="archive-stat-records" style="font-size: 0.95rem; color: var(--text-color);">0 registros</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.85rem; color: var(--text-muted);">Monto total acumulado:</span>
-                        <strong id="archive-total-amount" style="font-size: 0.95rem; color: var(--primary-color);">RD$ 0.00</strong>
+                        <strong id="archive-stat-amount" style="font-size: 0.95rem; color: var(--primary-color);">RD$ 0.00</strong>
                     </div>
                 </div>
 
                 <!-- Aviso de Seguridad -->
-                <div style="padding: 12px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--text-color); font-size: 0.82rem; line-height: 1.45; margin-bottom: 10px;">
+                <div style="padding: 12px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--text-color); font-size: 0.82rem; line-height: 1.45; margin-bottom: 6px;">
                     <strong style="color: #10b981; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         Protección Automática:
@@ -1177,6 +1177,7 @@
             </div>
         </div>
     </div>
+
 
 
     <!-- COPILOT DE FINANZAS PERSONALES -->
