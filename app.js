@@ -843,7 +843,12 @@ let currentMmpMode = 'edit';
 function setMmpMode(mode) {
     currentMmpMode = mode;
     const tabEdit = document.getElementById('mmp-tab-edit');
+    const tabMembers = document.getElementById('mmp-tab-members');
     const tabCreate = document.getElementById('mmp-tab-create');
+
+    const sectionConfig = document.getElementById('mmp-section-config');
+    const sectionMembers = document.getElementById('mmp-section-members');
+
     const sectionTitle = document.getElementById('mmp-section-title');
     const sectionDesc = document.getElementById('mmp-section-desc');
     const copyContainer = document.getElementById('mmp-copy-local-container');
@@ -855,15 +860,23 @@ function setMmpMode(mode) {
     const isTreasury = currentManagePassphraseModule === 'tesoreria';
     const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
 
+    // Reset styles on tabs
+    [tabEdit, tabMembers, tabCreate].forEach(tab => {
+        if (tab) {
+            tab.style.background = 'transparent';
+            tab.style.color = 'var(--text-muted)';
+        }
+    });
+
+    if (sectionConfig) sectionConfig.style.display = 'none';
+    if (sectionMembers) sectionMembers.style.display = 'none';
+
     if (mode === 'edit') {
         if (tabEdit) {
             tabEdit.style.background = 'var(--primary-color)';
             tabEdit.style.color = 'white';
         }
-        if (tabCreate) {
-            tabCreate.style.background = 'transparent';
-            tabCreate.style.color = 'var(--text-muted)';
-        }
+        if (sectionConfig) sectionConfig.style.display = 'block';
         if (sectionTitle) sectionTitle.textContent = 'Configurar Nombre y Passphrase';
         if (sectionDesc) sectionDesc.textContent = 'Modifica los datos de este espacio activo. Al cambiar el nombre o clave se actualizarán para todos.';
         if (copyContainer) copyContainer.style.display = 'none';
@@ -878,11 +891,7 @@ function setMmpMode(mode) {
         if (disconnectContainer && disconnectBtn) {
             if (activeSpace.hash) {
                 disconnectContainer.style.display = 'block';
-                if (activeSpace.isOwner) {
-                    disconnectBtn.textContent = 'Dejar de Compartir este Espacio (Volver a Cuenta Local)';
-                } else {
-                    disconnectBtn.textContent = 'Desconectarme de este Espacio (Volver a mi Cuenta Local)';
-                }
+                disconnectBtn.textContent = activeSpace.isOwner ? 'Dejar de Compartir este Espacio (Volver a Cuenta Local)' : 'Desconectarme de este Espacio (Volver a mi Cuenta Local)';
             } else {
                 if (activeSpace.passphrase || savedLocalPass) {
                     disconnectContainer.style.display = 'block';
@@ -892,15 +901,19 @@ function setMmpMode(mode) {
                 }
             }
         }
-    } else {
+    } else if (mode === 'members') {
+        if (tabMembers) {
+            tabMembers.style.background = 'var(--primary-color)';
+            tabMembers.style.color = 'white';
+        }
+        if (sectionMembers) sectionMembers.style.display = 'block';
+        renderMembersTable(currentManagePassphraseModule);
+    } else if (mode === 'create') {
         if (tabCreate) {
             tabCreate.style.background = 'var(--primary-color)';
             tabCreate.style.color = 'white';
         }
-        if (tabEdit) {
-            tabEdit.style.background = 'transparent';
-            tabEdit.style.color = 'var(--text-muted)';
-        }
+        if (sectionConfig) sectionConfig.style.display = 'block';
         if (sectionTitle) sectionTitle.textContent = 'Crear un Nuevo Espacio Compartido';
         if (sectionDesc) sectionDesc.textContent = 'Asigna un nombre y frase de acceso a un espacio nuevo. Puedes iniciar en blanco o copiar tus datos actuales.';
         if (copyContainer) copyContainer.style.display = 'flex';
@@ -957,6 +970,14 @@ async function openManagePassphraseModal(moduleName) {
         } catch (mErr) {
             console.warn("Error cargando integrantes del espacio:", mErr);
         }
+    }
+
+    // Actualizar contador en la pestaña de Integrantes
+    const membersBadge = document.getElementById('mmp-tab-members-badge');
+    if (membersBadge) {
+        const memCount = Object.keys(activeSpace.members || {}).filter(uid => !currentUser || uid !== currentUser.uid).length;
+        membersBadge.textContent = memCount > 0 ? `${memCount}` : '';
+        membersBadge.style.display = memCount > 0 ? 'inline-block' : 'none';
     }
 
     if (transferSection) {
@@ -3490,9 +3511,22 @@ function setupEventListeners() {
 
     // Manejadores de pestanas en modal de gestion de espacio
     const mmpTabEdit = document.getElementById('mmp-tab-edit');
+    const mmpTabMembers = document.getElementById('mmp-tab-members');
     const mmpTabCreate = document.getElementById('mmp-tab-create');
+    const btnMmpRefreshMembers = document.getElementById('btn-mmp-refresh-members');
+
     if (mmpTabEdit) mmpTabEdit.addEventListener('click', () => setMmpMode('edit'));
+    if (mmpTabMembers) mmpTabMembers.addEventListener('click', () => setMmpMode('members'));
     if (mmpTabCreate) mmpTabCreate.addEventListener('click', () => setMmpMode('create'));
+    if (btnMmpRefreshMembers) {
+        btnMmpRefreshMembers.addEventListener('click', async () => {
+            btnMmpRefreshMembers.textContent = '⌛ Cargando...';
+            await openManagePassphraseModal(currentManagePassphraseModule);
+            setMmpMode('members');
+            btnMmpRefreshMembers.textContent = '🔄 Actualizar';
+            showToast('Lista de integrantes actualizada.', 'info');
+        });
+    }
 
     // Formulario de Configuracion / Creacion de Espacio
     const mmpSpaceForm = document.getElementById('mmp-space-form');

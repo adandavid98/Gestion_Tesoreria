@@ -951,102 +951,117 @@
 
     <!-- MODAL: Administrar Passphrase y Permisos de Integrantes -->
     <div id="modal-manage-passphrase" class="modal-overlay">
-        <div class="modal-container" style="max-width: 650px;">
+        <div class="modal-container" style="max-width: 700px;">
             <div class="modal-header">
                 <h3 id="mmp-modal-title">Configurar Passphrase y Permisos</h3>
                 <button class="modal-close-btn" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
-                <!-- Pestañas de Selección de Acción -->
+            <div class="modal-body" style="max-height: 520px; overflow-y: auto;">
+                <!-- Pestañas de Navegación del Modal -->
                 <div style="display: flex; gap: 8px; margin-bottom: 14px; background: var(--input-bg); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
                     <button type="button" id="mmp-tab-edit" style="flex: 1; padding: 8px; font-size: 0.83rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: var(--primary-color); color: white; transition: all 0.2s;">
-                        ✏️ Modificar Espacio Activo
+                        ⚙️ Configurar Espacio
+                    </button>
+                    <button type="button" id="mmp-tab-members" style="flex: 1; padding: 8px; font-size: 0.83rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.2s;">
+                        👥 Integrantes y Permisos <span id="mmp-tab-members-badge" style="font-size: 0.72rem; padding: 2px 6px; border-radius: 10px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; margin-left: 4px;"></span>
                     </button>
                     <button type="button" id="mmp-tab-create" style="flex: 1; padding: 8px; font-size: 0.83rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.2s;">
-                        ➕ Crear un Nuevo Espacio
+                        ➕ Crear Nuevo Espacio
                     </button>
                 </div>
 
-                <!-- Banner Informativo de Espacio Activo -->
-                <div id="mmp-active-space-info" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); padding: 12px 14px; border-radius: var(--radius-sm); margin-bottom: 14px;">
-                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
-                        <span>📍 Espacio Activo:</span>
-                        <span id="mmp-current-space-badge" style="color: var(--primary-color); font-weight: 700;">Cuenta Personal (Google)</span>
+                <!-- SECCIÓN 1: Configuración y Datos del Espacio -->
+                <div id="mmp-section-config">
+                    <!-- Banner Informativo de Espacio Activo -->
+                    <div id="mmp-active-space-info" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); padding: 12px 14px; border-radius: var(--radius-sm); margin-bottom: 14px;">
+                        <div style="font-weight: 600; font-size: 0.88rem; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
+                            <span>📍 Espacio Activo:</span>
+                            <span id="mmp-current-space-badge" style="color: var(--primary-color); font-weight: 700;">Cuenta Personal (Google)</span>
+                        </div>
+                        <p id="mmp-current-space-desc" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">
+                            Estás asignando o modificando el nombre/passphrase de tu espacio de trabajo actual.
+                        </p>
                     </div>
-                    <p id="mmp-current-space-desc" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">
-                        Estás asignando o modificando el nombre/passphrase de tu espacio de trabajo actual.
-                    </p>
+
+                    <!-- Datos del Espacio Actual / Nuevo -->
+                    <div style="background-color: var(--input-bg); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 16px;">
+                        <h4 id="mmp-section-title" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; color: var(--text-color);">Configurar Nombre y Passphrase</h4>
+                        <p id="mmp-section-desc" style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Modifica los datos de este espacio. Si es tu espacio local, al ponerle passphrase podrás compartirlo.</p>
+                        
+                        <form id="mmp-space-form" style="display: flex; flex-direction: column; gap: 10px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="mmp-space-name-input" style="font-size: 8.5pt; font-weight: 600;">Nombre del Espacio</label>
+                                <input type="text" id="mmp-space-name-input" placeholder="Ej: Tesorería Iglesia Principal" required style="height: 36px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="mmp-passphrase-input" style="font-size: 8.5pt; font-weight: 600;">Frase de Acceso (Passphrase)</label>
+                                <input type="text" id="mmp-passphrase-input" placeholder="Ej: iglesia2026" style="height: 36px;">
+                            </div>
+
+                            <!-- Opción de copiar datos actuales al crear nuevo espacio -->
+                            <div id="mmp-copy-local-container" style="display: none; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-color); margin-top: 2px;">
+                                <input type="checkbox" id="mmp-copy-local-check" style="width: 16px; height: 16px; cursor: pointer;">
+                                <label for="mmp-copy-local-check" style="cursor: pointer; user-select: none;">
+                                    📦 Copiar mis datos actuales a este nuevo espacio (Desmarcar para iniciar en blanco)
+                                </label>
+                            </div>
+
+                            <button type="submit" id="mmp-space-submit-btn" class="btn-primary" style="height: 36px; width: 100%; margin-top: 4px;">💾 Guardar Cambios en mi Espacio Activo</button>
+                        </form>
+
+                        <!-- Botón para Desconectarse o Dejar de Compartir -->
+                        <div id="mmp-disconnect-container" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); text-align: center;">
+                            <button type="button" id="btn-mmp-disconnect" class="btn-danger-outline" style="width: 100%; height: 34px; font-size: 0.82rem;">
+                                🔌 Desconectarme de este Espacio (Volver a mi Cuenta Local)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Transferir Propiedad (Exclusivo Módulo de Tesorería) -->
+                    <div id="mmp-transfer-section" style="background-color: rgba(168, 85, 247, 0.08); padding: 14px; border-radius: var(--radius-sm); border: 1px solid rgba(168, 85, 247, 0.25); margin-bottom: 10px;">
+                        <h4 id="mmp-transfer-title" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; color: #a855f7;">🔄 Transferir Propiedad del Módulo de Tesorería</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Traspasa todos los derechos de Usuario Principal a otro integrante. Si la persona no ha usado la app, escribe su correo de Google para dejar una transferencia pendiente.</p>
+                        
+                        <form id="mmp-transfer-form" style="display: flex; flex-direction: column; gap: 10px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label id="mmp-transfer-label" for="mmp-new-owner-email" style="font-size: 8.5pt; font-weight: 600;">Correo de Google del Nuevo Tesorero Principal</label>
+                                <input type="email" id="mmp-new-owner-email" placeholder="Ej: nuevo.tesorero@gmail.com" required style="height: 36px;">
+                            </div>
+                            <button type="submit" class="btn-danger-outline" style="height: 36px; border-color: #a855f7; color: #a855f7;">Transferir Control de Propietario</button>
+                        </form>
+                    </div>
                 </div>
 
-                <!-- Sección 1: Datos del Espacio Actual / Nuevo -->
-                <div style="background-color: var(--input-bg); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
-                    <h4 id="mmp-section-title" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; color: var(--text-color);">Configurar Nombre y Passphrase</h4>
-                    <p id="mmp-section-desc" style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Modifica los datos de este espacio. Si es tu espacio local, al ponerle passphrase podrás compartirlo.</p>
-                    
-                    <form id="mmp-space-form" style="display: flex; flex-direction: column; gap: 10px;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="mmp-space-name-input" style="font-size: 8.5pt; font-weight: 600;">Nombre del Espacio</label>
-                            <input type="text" id="mmp-space-name-input" placeholder="Ej: Tesorería Iglesia Principal" required style="height: 36px;">
+                <!-- SECCIÓN 2: Lista de Integrantes Conectados y Permisos -->
+                <div id="mmp-section-members" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div>
+                            <h4 style="font-size: 0.95rem; font-weight: 600; color: var(--text-color); margin-bottom: 2px;">Integrantes Conectados</h4>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0;">Gestiona permisos individuales (Solo Ver, Agregar, Editar, Eliminar o Bloqueado).</p>
                         </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="mmp-passphrase-input" style="font-size: 8.5pt; font-weight: 600;">Frase de Acceso (Passphrase)</label>
-                            <input type="text" id="mmp-passphrase-input" placeholder="Ej: iglesia2026" style="height: 36px;">
-                        </div>
-
-                        <!-- Opción de copiar datos actuales al crear nuevo espacio -->
-                        <div id="mmp-copy-local-container" style="display: none; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-color); margin-top: 2px;">
-                            <input type="checkbox" id="mmp-copy-local-check" style="width: 16px; height: 16px; cursor: pointer;">
-                            <label for="mmp-copy-local-check" style="cursor: pointer; user-select: none;">
-                                📦 Copiar mis datos actuales a este nuevo espacio (Desmarcar para iniciar en blanco)
-                            </label>
-                        </div>
-
-                        <button type="submit" id="mmp-space-submit-btn" class="btn-primary" style="height: 36px; width: 100%; margin-top: 4px;">💾 Guardar Cambios en mi Espacio Activo</button>
-                    </form>
-
-                    <!-- Botón para Desconectarse o Dejar de Compartir -->
-                    <div id="mmp-disconnect-container" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); text-align: center;">
-                        <button type="button" id="btn-mmp-disconnect" class="btn-danger-outline" style="width: 100%; height: 34px; font-size: 0.82rem;">
-                            🔌 Desconectarme de este Espacio (Volver a mi Cuenta Local)
+                        <button type="button" id="btn-mmp-refresh-members" class="btn-neutral" style="padding: 4px 10px; font-size: 0.78rem; height: 30px;" title="Actualizar lista de integrantes">
+                            🔄 Actualizar
                         </button>
                     </div>
-                </div>
-
-                <!-- Sección 2: Transferir Propiedad (Exclusivo Módulo de Tesorería) -->
-                <div id="mmp-transfer-section" style="background-color: rgba(168, 85, 247, 0.08); padding: 14px; border-radius: var(--radius-sm); border: 1px solid rgba(168, 85, 247, 0.25); margin-bottom: 20px;">
-                    <h4 id="mmp-transfer-title" style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; color: #a855f7;">🔄 Transferir Propiedad del Módulo de Tesorería</h4>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Traspasa todos los derechos de Usuario Principal a otro integrante. Si la persona no ha usado la app, escribe su correo de Google para dejar una transferencia pendiente.</p>
                     
-                    <form id="mmp-transfer-form" style="display: flex; flex-direction: column; gap: 10px;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label id="mmp-transfer-label" for="mmp-new-owner-email" style="font-size: 8.5pt; font-weight: 600;">Correo de Google del Nuevo Tesorero Principal</label>
-                            <input type="email" id="mmp-new-owner-email" placeholder="Ej: nuevo.tesorero@gmail.com" required style="height: 36px;">
-                        </div>
-                        <button type="submit" class="btn-danger-outline" style="height: 36px; border-color: #a855f7; color: #a855f7;">Transferir Control de Propietario</button>
-                    </form>
-                </div>
-
-                <!-- Sección 3: Lista de Miembros y Permisos Individuales -->
-                <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; color: var(--text-color);">Integrantes Conectados y Permisos</h4>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Configura permisos de Solo Ver (Read Only), Agregar, Editar, Eliminar o Bloquea el acceso a cada correo individualmente.</p>
-                
-                <div class="members-table-container">
-                    <table class="members-table">
-                        <thead>
-                            <tr>
-                                <th>Usuario / Correo</th>
-                                <th style="text-align: center;" title="Permiso para agregar registros">Agregar</th>
-                                <th style="text-align: center;" title="Permiso para editar registros">Editar</th>
-                                <th style="text-align: center;" title="Permiso para eliminar registros">Eliminar</th>
-                                <th style="text-align: center;" title="Solo Ver (Desactiva agregar, editar y eliminar)">Solo Ver</th>
-                                <th style="text-align: center;" title="Bloquear acceso total al espacio">Bloqueado</th>
-                                <th style="text-align: center;">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="mmp-members-tbody">
-                            <!-- Inyectado dinámicamente -->
-                        </tbody>
-                    </table>
+                    <div class="members-table-container" style="margin-top: 10px;">
+                        <table class="members-table">
+                            <thead>
+                                <tr>
+                                    <th>Usuario / Correo</th>
+                                    <th style="text-align: center;" title="Permiso para agregar registros">Agregar</th>
+                                    <th style="text-align: center;" title="Permiso para editar registros">Editar</th>
+                                    <th style="text-align: center;" title="Permiso para eliminar registros">Eliminar</th>
+                                    <th style="text-align: center;" title="Solo Ver (Desactiva agregar, editar y eliminar)">Solo Ver</th>
+                                    <th style="text-align: center;" title="Bloquear acceso total al espacio">Bloqueado</th>
+                                    <th style="text-align: center;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mmp-members-tbody">
+                                <!-- Inyectado dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer" style="padding-top: 10px;">
