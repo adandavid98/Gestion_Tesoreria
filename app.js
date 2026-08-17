@@ -742,12 +742,13 @@ async function disconnectActiveSpace(moduleName) {
     const isTreasury = moduleName === 'tesoreria';
     if (isTreasury) {
         if (treasuryUnsubscribe) { treasuryUnsubscribe(); treasuryUnsubscribe = null; }
+        transactions = [];
         activeTreasurySpace = {
-            passphrase: localStorage.getItem('treasury_passphrase') || '',
+            passphrase: '',
             hash: '',
-            spaceName: localStorage.getItem('treasury_space_name') || 'Cuenta Personal',
+            spaceName: 'Cuenta Personal',
             isOwner: true,
-            permissions: { allowEdit: true, allowDelete: true },
+            permissions: { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false },
             isBlocked: false,
             members: {},
             logs: []
@@ -755,14 +756,17 @@ async function disconnectActiveSpace(moduleName) {
         await setupSpaceListener('tesoreria');
         updateSpaceBadgeUI('tesoreria');
         updateModulePermissionUI('tesoreria');
+        render();
     } else {
         if (personalUnsubscribe) { personalUnsubscribe(); personalUnsubscribe = null; }
+        personalExpenses = [];
+        personalIncomes = {};
         activePersonalSpace = {
-            passphrase: localStorage.getItem('personal_passphrase') || '',
+            passphrase: '',
             hash: '',
-            spaceName: localStorage.getItem('personal_space_name') || 'Cuenta Personal',
+            spaceName: 'Cuenta Personal',
             isOwner: true,
-            permissions: { allowEdit: true, allowDelete: true },
+            permissions: { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false },
             isBlocked: false,
             members: {},
             logs: []
@@ -924,12 +928,26 @@ function openManagePassphraseModal(moduleName) {
             badgeEl.textContent = `${activeSpace.spaceName || 'Cuenta Personal (Google)'} (Espacio Local)`;
             descEl.innerHTML = `<strong>Acción:</strong> Estás modificando tu espacio actual. Si agregas una Passphrase abajo, tus datos actuales se protegerán y podrás compartirlos con otros.`;
         } else {
-            badgeEl.textContent = `${activeSpace.spaceName || 'Espacio Compartido'} (Espacio Conectado)`;
-            descEl.innerHTML = `<strong>Acción:</strong> Estás modificando este espacio compartido activo. Los cambios se guardarán directamente en este espacio.`;
+    // Determinar hash para cargar miembros
+    let spaceHash = activeSpace.hash;
+    if (!spaceHash && activeSpace.passphrase) {
+        spaceHash = await hashPassphrase(moduleName, activeSpace.passphrase);
+    }
+
+    if (spaceHash && db) {
+        try {
+            const collectionName = isTreasury ? 'shared_tesoreria' : 'shared_personales';
+            const spaceDocRef = doc(db, collectionName, spaceHash);
+            const docSnap = await getDoc(spaceDocRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                activeSpace.members = data.members || {};
+            }
+        } catch (mErr) {
+            console.warn("Error cargando integrantes del espacio:", mErr);
         }
     }
 
-    // La transferencia de propiedad es exclusiva del Modulo de Tesoreria para el Tesorero Principal
     if (transferSection) {
         const isOwner = activeSpace.isOwner || !activeSpace.hash;
         transferSection.style.display = (moduleName === 'tesoreria' && isOwner) ? 'block' : 'none';
@@ -947,13 +965,19 @@ function renderMembersTable(moduleName) {
     const members = activeSpace.members || {};
     const memberKeys = Object.keys(members);
 
-    if (memberKeys.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:15px; color:var(--text-muted);">No hay otros integrantes registrados con esta passphrase.</td></tr>';
+    // Filtrar al propietario de la lista si se desea, o mostrar a los demas integrantes
+    const otherMemberKeys = memberKeys.filter(uid => {
+        if (!currentUser) return true;
+        return uid !== currentUser.uid;
+    });
+
+    if (otherMemberKeys.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:15px; color:var(--text-muted);">No hay otros integrantes conectados aún con esta passphrase.</td></tr>';
         return;
     }
 
     let html = '';
-    memberKeys.forEach(uid => {
+    otherMemberKeys.forEach(uid => {
         const m = members[uid];
         const p = m.permissions || {};
         const allowAdd = p.allowAdd !== undefined ? p.allowAdd : true;
@@ -998,8 +1022,16 @@ function renderMembersTable(moduleName) {
 }
 
 window.updateMemberPermission = async function(moduleName, uid, field, value) {
-    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
-    if (!activeSpace.hash || !activeSpace.isOwner) return;
+    const isTreasury = moduleName === 'tesoreria';
+    const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
+    const isOwner = activeSpace.isOwner || !activeSpace.hash;
+    if (!isOwner) return;
+
+    let spaceHash = activeSpace.hash;
+    if (!spaceHash && activeSpace.passphrase) {
+        spaceHash = await hashPassphrase(moduleName, activeSpace.passphrase);
+    }
+    if (!spaceHash) return;
 
     if (activeSpace.members[uid]) {
         if (field === 'isBlocked') {
@@ -1025,7 +1057,7 @@ window.updateMemberPermission = async function(moduleName, uid, field, value) {
             }
         }
 
-        const docRef = doc(db, 'shared_' + moduleName, activeSpace.hash);
+        const docRef = doc(db, 'shared_' + moduleName, spaceHash);
         await updateDoc(docRef, {
             members: activeSpace.members
         });
@@ -1035,12 +1067,20 @@ window.updateMemberPermission = async function(moduleName, uid, field, value) {
 };
 
 window.removeMember = async function(moduleName, uid) {
-    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
-    if (!activeSpace.hash || !activeSpace.isOwner) return;
+    const isTreasury = moduleName === 'tesoreria';
+    const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
+    const isOwner = activeSpace.isOwner || !activeSpace.hash;
+    if (!isOwner) return;
 
-    if (confirm('?Deseas remover el acceso a este integrante?')) {
+    let spaceHash = activeSpace.hash;
+    if (!spaceHash && activeSpace.passphrase) {
+        spaceHash = await hashPassphrase(moduleName, activeSpace.passphrase);
+    }
+    if (!spaceHash) return;
+
+    if (confirm('¿Deseas remover el acceso a este integrante?')) {
         delete activeSpace.members[uid];
-        const docRef = doc(db, 'shared_' + moduleName, activeSpace.hash);
+        const docRef = doc(db, 'shared_' + moduleName, spaceHash);
         await updateDoc(docRef, {
             members: activeSpace.members
         });
@@ -1122,9 +1162,9 @@ async function saveTransactions() {
     
     if (currentUser && db) {
         try {
-            const passToSync = activeTreasurySpace.hash ? activeTreasurySpace.hash : (activeTreasurySpace.passphrase ? await hashPassphrase('tesoreria', activeTreasurySpace.passphrase) : '');
-            if (passToSync) {
-                const spaceDocRef = doc(db, 'shared_tesoreria', passToSync);
+            if (activeTreasurySpace.hash) {
+                // SOLO si estamos conectados a un espacio compartido activo con hash
+                const spaceDocRef = doc(db, 'shared_tesoreria', activeTreasurySpace.hash);
                 const updateObj = {
                     transactions: sanitizeData(transactions),
                     treasuryCategories: sanitizeData(treasuryCategories),
@@ -1134,21 +1174,18 @@ async function saveTransactions() {
                 if (activeTreasurySpace.isOwner && activeTreasurySpace.spaceName && activeTreasurySpace.spaceName !== 'Espacio Compartido') {
                     updateObj.spaceName = activeTreasurySpace.spaceName;
                 }
-                try {
-                    await setDoc(spaceDocRef, updateObj, { merge: true });
-                } catch (sharedErr) {
-                    console.warn("Aviso al sincronizar en shared_tesoreria:", sharedErr);
-                }
+                await setDoc(spaceDocRef, updateObj, { merge: true });
+            } else {
+                // Estamos en la CUENTA LOCAL PRIVADA del usuario -> Guardar SOLO en su perfil
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                await setDoc(userDocRef, {
+                    transactions: sanitizeData(transactions),
+                    treasuryCategories: sanitizeData(treasuryCategories),
+                    treasuryLogs: activeTreasurySpace.logs || [],
+                    logs: activeTreasurySpace.logs || [],
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
             }
-            
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            await setDoc(userDocRef, {
-                transactions: sanitizeData(transactions),
-                treasuryCategories: sanitizeData(treasuryCategories),
-                treasuryLogs: activeTreasurySpace.logs || [],
-                logs: activeTreasurySpace.logs || [],
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
         } catch (error) {
             console.error("Error al guardar en Firestore: ", error);
             showToast('Error al guardar datos en la nube.', 'error');
@@ -1282,30 +1319,33 @@ async function setupSpaceListener(moduleName) {
                     localStorage.setItem('treasury_space_name', localName);
                     if (localPass) localStorage.setItem('treasury_passphrase', localPass);
                     if (data.transactions && Array.isArray(data.transactions)) {
-                        if (data.transactions.length > 0 || transactions.length === 0) {
-                            transactions = data.transactions;
-                        } else if (transactions.length > 0) {
-                            saveTransactions();
-                        }
-                    } else if (transactions.length > 0) {
-                        saveTransactions();
+                        transactions = data.transactions;
+                    } else {
+                        transactions = [];
                     }
                     if (data.treasuryCategories && Array.isArray(data.treasuryCategories)) {
                         treasuryCategories = data.treasuryCategories;
+                    } else {
+                        treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
                     }
                     if (data.treasuryLogs && Array.isArray(data.treasuryLogs)) {
                         activeTreasurySpace.logs = data.treasuryLogs;
                     } else if (data.logs && Array.isArray(data.logs)) {
                         activeTreasurySpace.logs = data.logs;
+                    } else {
+                        activeTreasurySpace.logs = [];
                     }
                     if (data.savedWorkspaces) userSavedWorkspaces = data.savedWorkspaces;
                     localStorage.setItem('transacciones', JSON.stringify(transactions));
                     localStorage.setItem('treasury_categories', JSON.stringify(treasuryCategories));
                     localStorage.setItem('treasury_logs', JSON.stringify(activeTreasurySpace.logs || []));
                 } else {
-                    if (transactions.length > 0) {
-                        saveTransactions();
-                    }
+                    transactions = [];
+                    treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
+                    activeTreasurySpace.logs = [];
+                    localStorage.setItem('transacciones', JSON.stringify([]));
+                    localStorage.setItem('treasury_categories', JSON.stringify(treasuryCategories));
+                    localStorage.setItem('treasury_logs', JSON.stringify([]));
                 }
                 updateSpaceBadgeUI('tesoreria');
                 render();
@@ -1452,39 +1492,37 @@ async function setupSpaceListener(moduleName) {
                     localStorage.setItem('personal_space_name', localName);
                     if (localPass) localStorage.setItem('personal_passphrase', localPass);
                     if (data.personalExpenses && Array.isArray(data.personalExpenses)) {
-                        if (data.personalExpenses.length > 0 || personalExpenses.length === 0) {
-                            personalExpenses = data.personalExpenses;
-                        } else if (personalExpenses.length > 0) {
-                            savePersonalFinances();
-                        }
-                    } else if (personalExpenses.length > 0) {
-                        savePersonalFinances();
+                        personalExpenses = data.personalExpenses;
+                    } else {
+                        personalExpenses = [];
                     }
                     
                     if (data.personalIncomes && typeof data.personalIncomes === 'object') {
-                        if (Object.keys(data.personalIncomes).length > 0 || Object.keys(personalIncomes).length === 0) {
-                            personalIncomes = data.personalIncomes;
-                        } else if (Object.keys(personalIncomes).length > 0) {
-                            savePersonalFinances();
-                        }
+                        personalIncomes = data.personalIncomes;
                     } else if (data.personalIncome !== undefined) {
                         const legacyVal = parseFloat(data.personalIncome) || 0.00;
                         if (legacyVal > 0) {
                             const now = new Date();
                             const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                            personalIncomes[currentMonthKey] = legacyVal;
+                            personalIncomes = { [currentMonthKey]: legacyVal };
+                        } else {
+                            personalIncomes = {};
                         }
-                    } else if (Object.keys(personalIncomes).length > 0) {
-                        savePersonalFinances();
+                    } else {
+                        personalIncomes = {};
                     }
                     
                     if (data.personalCategories && Array.isArray(data.personalCategories)) {
                         personalCategories = data.personalCategories;
+                    } else {
+                        personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
                     }
                     if (data.personalLogs && Array.isArray(data.personalLogs)) {
                         activePersonalSpace.logs = data.personalLogs;
                     } else if (data.logs && Array.isArray(data.logs)) {
                         activePersonalSpace.logs = data.logs;
+                    } else {
+                        activePersonalSpace.logs = [];
                     }
                     if (data.savedWorkspaces) userSavedWorkspaces = data.savedWorkspaces;
                     
@@ -1493,9 +1531,14 @@ async function setupSpaceListener(moduleName) {
                     localStorage.setItem('personal_categories', JSON.stringify(personalCategories));
                     localStorage.setItem('pf_logs', JSON.stringify(activePersonalSpace.logs || []));
                 } else {
-                    if (personalExpenses.length > 0 || Object.keys(personalIncomes).length > 0) {
-                        savePersonalFinances();
-                    }
+                    personalExpenses = [];
+                    personalIncomes = {};
+                    personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
+                    activePersonalSpace.logs = [];
+                    localStorage.setItem('pf_expenses', JSON.stringify([]));
+                    localStorage.setItem('pf_incomes', JSON.stringify({}));
+                    localStorage.setItem('personal_categories', JSON.stringify(personalCategories));
+                    localStorage.setItem('pf_logs', JSON.stringify([]));
                 }
                 updateSpaceBadgeUI('personales');
                 initPfFilters();
@@ -1555,15 +1598,19 @@ async function setupSpaceListener(moduleName) {
                 
                 if (!activePersonalSpace.members[currentUser.uid] && !isOwner) {
                     activePersonalSpace.members[currentUser.uid] = {
-                        email: currentUser.email,
-                        displayName: currentUser.displayName || currentUser.email.split('@')[0],
+                        email: currentUser.email || 'invitado@gmail.com',
+                        displayName: currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Invitado'),
                         joinedAt: new Date().toISOString(),
                         isBlocked: false,
                         permissions: { allowAdd: true, allowEdit: false, allowDelete: false, isReadOnly: false }
                     };
-                    await updateDoc(spaceDocRef, {
-                        members: activePersonalSpace.members
-                    });
+                    try {
+                        await updateDoc(spaceDocRef, {
+                            members: activePersonalSpace.members
+                        });
+                    } catch (memErr) {
+                        console.warn("Aviso al registrar miembro en Firestore:", memErr);
+                    }
                 }
                 
                 const userMemberData = activePersonalSpace.members[currentUser.uid];
@@ -1647,9 +1694,9 @@ async function savePersonalFinances() {
     
     if (currentUser && db) {
         try {
-            const passToSync = activePersonalSpace.hash ? activePersonalSpace.hash : (activePersonalSpace.passphrase ? await hashPassphrase('personales', activePersonalSpace.passphrase) : '');
-            if (passToSync) {
-                const spaceDocRef = doc(db, 'shared_personales', passToSync);
+            if (activePersonalSpace.hash) {
+                // SOLO si estamos conectados a un espacio compartido activo con hash
+                const spaceDocRef = doc(db, 'shared_personales', activePersonalSpace.hash);
                 const updateObj = {
                     personalExpenses: sanitizeData(personalExpenses),
                     personalIncomes: sanitizeData(personalIncomes),
@@ -1660,22 +1707,19 @@ async function savePersonalFinances() {
                 if (activePersonalSpace.isOwner && activePersonalSpace.spaceName && activePersonalSpace.spaceName !== 'Espacio Compartido') {
                     updateObj.spaceName = activePersonalSpace.spaceName;
                 }
-                try {
-                    await setDoc(spaceDocRef, updateObj, { merge: true });
-                } catch (sharedErr) {
-                    console.warn("Aviso al sincronizar en shared_personales:", sharedErr);
-                }
+                await setDoc(spaceDocRef, updateObj, { merge: true });
+            } else {
+                // Estamos en la CUENTA LOCAL PRIVADA del usuario -> Guardar SOLO en su perfil
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                await setDoc(userDocRef, {
+                    personalExpenses: sanitizeData(personalExpenses),
+                    personalIncomes: sanitizeData(personalIncomes),
+                    personalCategories: sanitizeData(personalCategories),
+                    personalLogs: activePersonalSpace.logs || [],
+                    logs: activePersonalSpace.logs || [],
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
             }
-            
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            await setDoc(userDocRef, {
-                personalExpenses: sanitizeData(personalExpenses),
-                personalIncomes: sanitizeData(personalIncomes),
-                personalCategories: sanitizeData(personalCategories),
-                personalLogs: activePersonalSpace.logs || [],
-                logs: activePersonalSpace.logs || [],
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
         } catch (e) {
             console.error('Error guardando finanzas personales en Firestore', e);
             showToast('Error de sincronizacion con la nube.', 'error');
