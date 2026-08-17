@@ -61,7 +61,7 @@ let activeTreasurySpace = {
     hash: '',
     spaceName: 'Cuenta Personal',
     isOwner: true,
-    permissions: { allowEdit: true, allowDelete: true },
+    permissions: { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false },
     isBlocked: false,
     members: {},
     logs: []
@@ -72,7 +72,7 @@ let activePersonalSpace = {
     hash: '',
     spaceName: 'Cuenta Personal',
     isOwner: true,
-    permissions: { allowEdit: true, allowDelete: true },
+    permissions: { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false },
     isBlocked: false,
     members: {},
     logs: []
@@ -87,6 +87,8 @@ let treasuryUnsubscribe = null;
 let personalUnsubscribe = null;
 let currentPassphraseModalModule = 'tesoreria';
 let currentManagePassphraseModule = 'tesoreria';
+let currentLogsModalModule = 'tesoreria';
+
 // Helper para limpiar valores undefined antes de guardar en Firestore
 function sanitizeData(data) {
     if (data === undefined) return null;
@@ -1136,22 +1138,71 @@ window.removeMember = async function(moduleName, uid) {
     }
 };
 
-function openActivityLogsModal(moduleName) {
+async function openActivityLogsModal(moduleName) {
     currentLogsModalModule = moduleName;
+    const isTreasury = moduleName === 'tesoreria';
+    const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
     const modal = document.getElementById('modal-activity-logs');
+
+    if (activeSpace.hash && db) {
+        // Espacio Compartido Activo -> Cargar desde shared_tesoreria / shared_personales
+        try {
+            const collectionName = isTreasury ? 'shared_tesoreria' : 'shared_personales';
+            const spaceDocRef = doc(db, collectionName, activeSpace.hash);
+            const docSnap = await getDoc(spaceDocRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (Array.isArray(data.logs)) {
+                    activeSpace.logs = data.logs;
+                }
+            }
+        } catch (lErr) {
+            console.warn("Aviso cargando logs de Firestore:", lErr);
+        }
+    } else if (currentUser && db) {
+        // Cuenta Local Privada -> Cargar desde users/{uid}
+        try {
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const userSnap = await getDoc(userDocRef);
+            if (userSnap.exists()) {
+                const uData = userSnap.data();
+                const userLogs = isTreasury ? (uData.treasuryLogs || uData.logs) : (uData.personalLogs || uData.logs);
+                if (Array.isArray(userLogs) && userLogs.length > 0) {
+                    activeSpace.logs = userLogs;
+                }
+            }
+        } catch (uErr) {
+            console.warn("Aviso cargando logs locales del usuario:", uErr);
+        }
+    }
+
+    // Si aún no hay logs en memoria o estamos offline/local, leer de localStorage
+    if (!activeSpace.logs || activeSpace.logs.length === 0) {
+        const localLogsKey = isTreasury ? 'treasury_logs' : 'pf_logs';
+        const savedLogs = localStorage.getItem(localLogsKey);
+        if (savedLogs) {
+            try {
+                activeSpace.logs = JSON.parse(savedLogs);
+            } catch(e) {}
+        }
+    }
+
     renderAuditLogsModal(moduleName);
     openModal(modal);
 }
+window.openActivityLogsModal = openActivityLogsModal;
+window.renderAuditLogsModal = renderAuditLogsModal;
 
 function renderAuditLogsModal(moduleName) {
     const tbody = document.getElementById('logs-tbody');
     if (!tbody) return;
 
-    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+    const isTreasury = moduleName === 'tesoreria';
+    const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
     const logs = activeSpace.logs || [];
 
     if (logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">No hay eventos de actividad registrados aun.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">No hay eventos de actividad registrados aún en este espacio.</td></tr>';
         return;
     }
 
@@ -1185,10 +1236,15 @@ async function loadTransactions() {
         const storedCats = localStorage.getItem('treasury_categories');
         if (storedCats) treasuryCategories = JSON.parse(storedCats);
         else treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
+
+        const storedLogs = localStorage.getItem('treasury_logs');
+        if (storedLogs) activeTreasurySpace.logs = JSON.parse(storedLogs);
+        else activeTreasurySpace.logs = [];
     } catch (e) {
         console.error('Error cargando transacciones desde localStorage', e);
         transactions = [];
         treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
+        activeTreasurySpace.logs = [];
     }
     
     if (currentUser && db) {
@@ -1713,11 +1769,15 @@ async function loadPersonalFinances() {
         else personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
         if (storedIncomes) personalIncomes = JSON.parse(storedIncomes);
         else personalIncomes = {};
+        const storedLogs = localStorage.getItem('pf_logs');
+        if (storedLogs) activePersonalSpace.logs = JSON.parse(storedLogs);
+        else activePersonalSpace.logs = [];
     } catch (e) {
         console.error('Error cargando finanzas personales desde localStorage', e);
         personalExpenses = [];
         personalIncomes = {};
         personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
+        activePersonalSpace.logs = [];
     }
     
     if (currentUser && db) {
@@ -2160,11 +2220,10 @@ async function handlePfExpenseSubmit(e) {
             personalExpenses[idx].estado = statusVal;
             personalExpenses[idx].categoria = categoryVal;
             
-            await savePersonalFinances();
-            addAuditLog('personales', 'EDITAR', `Modifico gasto "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
-            showToast('Gasto personal actualizado con exito.', 'success');
+            await addAuditLog('personales', 'EDITAR', `Modificó gasto (${typeVal}) "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
+            showToast('Gasto personal actualizado con éxito.', 'success');
             
-            // Restablecer el boton de envio y limpiar estado de edicion
+            // Restablecer el botón de envío y limpiar estado de edición
             cancelEditPersonalExpense();
         }
     } else {
@@ -2180,9 +2239,8 @@ async function handlePfExpenseSubmit(e) {
         };
         
         personalExpenses.unshift(newExpense);
-        await savePersonalFinances();
-        addAuditLog('personales', 'CREAR', `Registro gasto "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
-        showToast('Gasto personal registrado con exito.', 'success');
+        await addAuditLog('personales', 'CREAR', `Registró gasto (${typeVal}) "${conceptVal}" por RD$ ${amountVal.toFixed(2)}`);
+        showToast('Gasto personal registrado con éxito.', 'success');
         
         // Resetear formulario
         pfConcept.value = '';
@@ -2290,10 +2348,10 @@ async function togglePersonalExpenseState(id) {
     const expense = personalExpenses.find(e => e.id === id);
     if (expense) {
         expense.estado = expense.estado === 'pagado' ? 'pagar' : 'pagado';
-        await savePersonalFinances();
+        const msg = expense.estado === 'pagado' ? 'PAGADO' : 'PENDIENTE';
+        await addAuditLog('personales', 'EDITAR', `Marcó gasto "${expense.concepto}" como ${msg}`);
         renderPersonalFinances();
-        const msg = expense.estado === 'pagado' ? 'Gasto marcado como PAGADO.' : 'Gasto marcado como PENDIENTE.';
-        showToast(msg, 'info');
+        showToast(expense.estado === 'pagado' ? 'Gasto marcado como PAGADO.' : 'Gasto marcado como PENDIENTE.', 'info');
     }
 }
 
@@ -2302,14 +2360,23 @@ async function deletePersonalExpense(id) {
     if (idx !== -1) {
         const targetItem = personalExpenses[idx];
         personalExpenses.splice(idx, 1);
-        await savePersonalFinances();
         if (targetItem) {
-            addAuditLog('personales', 'ELIMINAR', `Elimino gasto "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
+            await addAuditLog('personales', 'ELIMINAR', `Eliminó gasto "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
+        } else {
+            await savePersonalFinances();
         }
         renderPersonalFinances();
         showToast('Gasto personal eliminado.', 'info');
     }
 }
+window.personalExpenses = personalExpenses;
+window.transactions = transactions;
+window.startEditPersonalExpense = startEditPersonalExpense;
+window.cancelEditPersonalExpense = cancelEditPersonalExpense;
+window.togglePersonalExpenseState = togglePersonalExpenseState;
+window.deletePersonalExpense = deletePersonalExpense;
+window.handlePfExpenseSubmit = handlePfExpenseSubmit;
+window.addAuditLog = addAuditLog;
 
 // --- ACCIONES FINANZAS PERSONALES: REPORTES Y RESPALDOS ---
 
@@ -4400,9 +4467,9 @@ function render() {
     renderTCharts();
 }
 
-// --- CREAR O EDITAR TRANSACCIoN (FORM SUBMIT) ---
+// --- CREAR O EDITAR TRANSACCIÓN (FORM SUBMIT) ---
 
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
     e.preventDefault();
 
     if (activeTreasurySpace.permissions.isReadOnly || activeTreasurySpace.permissions.allowAdd === false) {
@@ -4448,11 +4515,10 @@ function handleFormSubmit(e) {
             transactions[idx].categoria = categoria;
             transactions[idx].monto = monto;
             
-            addAuditLog('tesoreria', 'EDITAR', `Modifico ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
-            saveTransactions();
-            showToast('Transaccion modificada con exito.', 'success');
+            await addAuditLog('tesoreria', 'EDITAR', `Modificó ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
+            showToast('Transacción modificada con éxito.', 'success');
             
-            // Restablecer filtros del mes/ano modificado para verlo
+            // Restablecer filtros del mes/año modificado para verlo
             const [tYear, tMonth] = fecha.split('-').map(Number);
             filterMonth.value = tMonth - 1;
             filterYear.value = tYear;
@@ -4460,13 +4526,13 @@ function handleFormSubmit(e) {
             cancelEdit();
             render();
         } else {
-            showToast('No se encontro la transaccion a editar.', 'error');
+            showToast('No se encontró la transacción a editar.', 'error');
             cancelEdit();
         }
         return;
     }
     
-    // Modo Creacion (Nuevo registro)
+    // Modo Creación (Nuevo registro)
     const newTransaction = {
         id: 't-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
         fecha: fecha,
@@ -4477,12 +4543,10 @@ function handleFormSubmit(e) {
         createdAt: new Date().toISOString()
     };
     
-    // Anadir al inicio o guardar
+    // Añadir al inicio o guardar
     transactions.push(newTransaction);
     
-    addAuditLog('tesoreria', 'CREAR', `Registro ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
-    // Guardar en localStorage
-    saveTransactions();
+    await addAuditLog('tesoreria', 'CREAR', `Registró ${tipo} "${concepto}" por RD$ ${monto.toFixed(2)}`);
     
     // Actualizar filtro de ano si ingresaron un ano nuevo
     const inputYear = parseInt(fecha.split('-')[0]);
@@ -4591,7 +4655,7 @@ function requestDeleteTransaction(id) {
     openModal(modalDelete);
 }
 
-function confirmDeleteTransaction() {
+async function confirmDeleteTransaction() {
     if (!selectedTransactionIdToDelete) return;
     
     const targetItem = transactions.find(t => t.id === selectedTransactionIdToDelete);
@@ -4600,10 +4664,11 @@ function confirmDeleteTransaction() {
     
     if (transactions.length < initialCount) {
         if (targetItem) {
-            addAuditLog('tesoreria', 'ELIMINAR', `Elimino ${targetItem.tipo} "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
+            await addAuditLog('tesoreria', 'ELIMINAR', `Eliminó ${targetItem.tipo} "${targetItem.concepto}" por RD$ ${parseFloat(targetItem.monto).toFixed(2)}`);
+        } else {
+            await saveTransactions();
         }
-        saveTransactions();
-        showToast('Transaccion eliminada correctamente.', 'success');
+        showToast('Transacción eliminada correctamente.', 'success');
     }
     
     closeModal(modalDelete);
