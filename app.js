@@ -908,16 +908,17 @@ function setMmpMode(mode) {
     }
 }
 
-function openManagePassphraseModal(moduleName) {
+async function openManagePassphraseModal(moduleName) {
     currentManagePassphraseModule = moduleName;
     const modal = document.getElementById('modal-manage-passphrase');
     const title = document.getElementById('mmp-modal-title');
     const transferSection = document.getElementById('mmp-transfer-section');
     const badgeEl = document.getElementById('mmp-current-space-badge');
     const descEl = document.getElementById('mmp-current-space-desc');
-    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+    const isTreasury = moduleName === 'tesoreria';
+    const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
 
-    const moduleTitle = moduleName === 'tesoreria' ? 'Tesorería' : 'Finanzas Personales';
+    const moduleTitle = isTreasury ? 'Tesorería' : 'Finanzas Personales';
     if (title) title.textContent = `Configurar Espacio: ${moduleTitle}`;
 
     setMmpMode('edit');
@@ -928,6 +929,11 @@ function openManagePassphraseModal(moduleName) {
             badgeEl.textContent = `${activeSpace.spaceName || 'Cuenta Personal (Google)'} (Espacio Local)`;
             descEl.innerHTML = `<strong>Acción:</strong> Estás modificando tu espacio actual. Si agregas una Passphrase abajo, tus datos actuales se protegerán y podrás compartirlos con otros.`;
         } else {
+            badgeEl.textContent = `${activeSpace.spaceName || 'Espacio Compartido'} (Espacio Conectado)`;
+            descEl.innerHTML = `<strong>Acción:</strong> Estás modificando este espacio compartido activo. Los cambios se guardarán directamente en este espacio.`;
+        }
+    }
+
     // Determinar hash para cargar miembros
     let spaceHash = activeSpace.hash;
     if (!spaceHash && activeSpace.passphrase) {
