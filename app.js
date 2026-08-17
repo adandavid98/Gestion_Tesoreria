@@ -87,7 +87,11 @@ let treasuryUnsubscribe = null;
 let personalUnsubscribe = null;
 let currentPassphraseModalModule = 'tesoreria';
 let currentManagePassphraseModule = 'tesoreria';
-let currentLogsModalModule = 'tesoreria';
+// Helper para limpiar valores undefined antes de guardar en Firestore
+function sanitizeData(data) {
+    if (data === undefined) return null;
+    return JSON.parse(JSON.stringify(data, (key, value) => value === undefined ? null : value));
+}
 
 // Generador de Hash para Passphrases
 async function hashPassphrase(moduleName, passphrase) {
@@ -3395,29 +3399,40 @@ function setupEventListeners() {
             }
 
             if (currentPassphraseModalModule === 'tesoreria') {
+                if (treasuryUnsubscribe) { treasuryUnsubscribe(); treasuryUnsubscribe = null; }
+                transactions = [];
                 activeTreasurySpace = {
-                    passphrase: localStorage.getItem('treasury_passphrase') || '',
+                    passphrase: '',
                     hash: '',
-                    spaceName: localStorage.getItem('treasury_space_name') || 'Cuenta Personal',
+                    spaceName: 'Cuenta Personal',
                     isOwner: true,
-                    permissions: { allowEdit: true, allowDelete: true },
+                    permissions: { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false },
                     isBlocked: false,
                     members: {},
                     logs: []
                 };
                 await setupSpaceListener('tesoreria');
+                updateSpaceBadgeUI('tesoreria');
+                updateModulePermissionUI('tesoreria');
+                render();
             } else {
+                if (personalUnsubscribe) { personalUnsubscribe(); personalUnsubscribe = null; }
+                personalExpenses = [];
+                personalIncomes = {};
                 activePersonalSpace = {
-                    passphrase: localStorage.getItem('personal_passphrase') || '',
+                    passphrase: '',
                     hash: '',
-                    spaceName: localStorage.getItem('personal_space_name') || 'Cuenta Personal',
+                    spaceName: 'Cuenta Personal',
                     isOwner: true,
-                    permissions: { allowEdit: true, allowDelete: true },
+                    permissions: { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false },
                     isBlocked: false,
                     members: {},
                     logs: []
                 };
                 await setupSpaceListener('personales');
+                updateSpaceBadgeUI('personales');
+                updateModulePermissionUI('personales');
+                renderPersonalFinances();
             }
             closePassphraseModal();
             showModule(currentPassphraseModalModule);
