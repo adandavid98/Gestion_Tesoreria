@@ -3550,26 +3550,21 @@ function setupEventListeners() {
                             }
                         }
                         
+                        if (treasuryUnsubscribe) { treasuryUnsubscribe(); treasuryUnsubscribe = null; }
+                        transactions = txData;
+                        treasuryCategories = catData;
                         activeTreasurySpace = {
                             passphrase: newPass,
                             hash,
                             spaceName: newName,
                             isOwner: true,
-                            permissions: { allowEdit: true, allowDelete: true },
+                            permissions: { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false },
                             isBlocked: false,
                             members: initialData.members,
                             logs: initialData.logs
                         };
                         
                         localStorage.setItem('owned_space_' + hash, 'true');
-                        localStorage.setItem('treasury_space_name', newName);
-                        localStorage.setItem('treasury_passphrase', newPass);
-
-                        if (!shouldCopy) {
-                            transactions = [];
-                            treasuryCategories = [...DEFAULT_TREASURY_CATEGORIES];
-                        }
-                        saveTransactions();
                     } else {
                         const expData = shouldCopy && Array.isArray(personalExpenses) ? sanitizeData(personalExpenses) : [];
                         const incData = shouldCopy && personalIncomes && typeof personalIncomes === 'object' ? sanitizeData(personalIncomes) : {};
@@ -3586,50 +3581,22 @@ function setupEventListeners() {
                             }
                         }
                         
+                        if (personalUnsubscribe) { personalUnsubscribe(); personalUnsubscribe = null; }
+                        personalExpenses = expData;
+                        personalIncomes = incData;
+                        personalCategories = catData;
                         activePersonalSpace = {
                             passphrase: newPass,
                             hash,
                             spaceName: newName,
                             isOwner: true,
-                            permissions: { allowEdit: true, allowDelete: true },
+                            permissions: { allowEdit: true, allowDelete: true, allowAdd: true, isReadOnly: false },
                             isBlocked: false,
                             members: initialData.members,
                             logs: initialData.logs
                         };
 
                         localStorage.setItem('owned_space_' + hash, 'true');
-                        localStorage.setItem('personal_space_name', newName);
-                        localStorage.setItem('personal_passphrase', newPass);
-
-                        if (!shouldCopy) {
-                            personalExpenses = [];
-                            personalIncomes = {};
-                            personalCategories = [...DEFAULT_PERSONAL_CATEGORIES];
-                        }
-                        savePersonalFinances();
-                    }
-
-                    if (effectiveUser && db) {
-                        try {
-                            const userDocRef = doc(db, 'users', effectiveUser.uid);
-                            const userUpdatePayload = {
-                                [isTreasury ? 'treasurySpaceName' : 'personalSpaceName']: newName,
-                                [isTreasury ? 'treasuryPassphrase' : 'personalPassphrase']: newPass,
-                                [isTreasury ? 'treasuryPassphraseHash' : 'personalPassphraseHash']: hash,
-                                updatedAt: new Date().toISOString()
-                            };
-                            if (isTreasury) {
-                                userUpdatePayload.transactions = shouldCopy && Array.isArray(transactions) ? sanitizeData(transactions) : [];
-                                userUpdatePayload.treasuryCategories = shouldCopy && Array.isArray(treasuryCategories) ? sanitizeData(treasuryCategories) : [...DEFAULT_TREASURY_CATEGORIES];
-                            } else {
-                                userUpdatePayload.personalExpenses = shouldCopy && Array.isArray(personalExpenses) ? sanitizeData(personalExpenses) : [];
-                                userUpdatePayload.personalIncomes = shouldCopy && personalIncomes && typeof personalIncomes === 'object' ? sanitizeData(personalIncomes) : {};
-                                userUpdatePayload.personalCategories = shouldCopy && Array.isArray(personalCategories) ? sanitizeData(personalCategories) : [...DEFAULT_PERSONAL_CATEGORIES];
-                            }
-                            await setDoc(userDocRef, userUpdatePayload, { merge: true });
-                        } catch (uErr) {
-                            console.warn("Aviso al guardar en perfil de usuario:", uErr);
-                        }
                     }
 
                     const savedList = userSavedWorkspaces[currentManagePassphraseModule] || [];
@@ -3637,8 +3604,9 @@ function setupEventListeners() {
                     if (existingIdx >= 0) {
                         savedList[existingIdx].name = newName;
                         savedList[existingIdx].passphrase = newPass;
+                        savedList[existingIdx].isOwner = true;
                     } else {
-                        savedList.push({ hash, passphrase: newPass, name: newName });
+                        savedList.push({ hash, passphrase: newPass, name: newName, isOwner: true });
                     }
                     userSavedWorkspaces[currentManagePassphraseModule] = savedList;
                     try {
@@ -3646,9 +3614,6 @@ function setupEventListeners() {
                     } catch (swErr) {
                         console.warn("No se pudo sincronizar workspaces guardados:", swErr);
                     }
-
-                    const passImportCheck = document.getElementById('passphrase-import-local-check');
-                    if (passImportCheck) passImportCheck.checked = shouldCopy;
 
                     try {
                         await setupSpaceListener(currentManagePassphraseModule);
