@@ -927,6 +927,13 @@ async function openManagePassphraseModal(moduleName) {
 
     setMmpMode('edit');
 
+    // Determinar hash para cargar miembros
+    let spaceHash = activeSpace.hash;
+    const localPass = activeSpace.passphrase || (isTreasury ? localStorage.getItem('treasury_passphrase') : localStorage.getItem('personal_passphrase')) || '';
+    if (!spaceHash && localPass) {
+        spaceHash = await hashPassphrase(moduleName, localPass);
+    }
+
     // Actualizar banner de espacio activo
     if (badgeEl && descEl) {
         if (!activeSpace.hash) {
@@ -936,12 +943,6 @@ async function openManagePassphraseModal(moduleName) {
             badgeEl.textContent = `${activeSpace.spaceName || 'Espacio Compartido'} (Espacio Conectado)`;
             descEl.innerHTML = `<strong>Acción:</strong> Estás modificando este espacio compartido activo. Los cambios se guardarán directamente en este espacio.`;
         }
-    }
-
-    // Determinar hash para cargar miembros
-    let spaceHash = activeSpace.hash;
-    if (!spaceHash && activeSpace.passphrase) {
-        spaceHash = await hashPassphrase(moduleName, activeSpace.passphrase);
     }
 
     if (spaceHash && db) {
@@ -971,18 +972,29 @@ function renderMembersTable(moduleName) {
     const tbody = document.getElementById('mmp-members-tbody');
     if (!tbody) return;
 
-    const activeSpace = moduleName === 'tesoreria' ? activeTreasurySpace : activePersonalSpace;
+    const isTreasury = moduleName === 'tesoreria';
+    const activeSpace = isTreasury ? activeTreasurySpace : activePersonalSpace;
     const members = activeSpace.members || {};
     const memberKeys = Object.keys(members);
 
-    // Filtrar al propietario de la lista si se desea, o mostrar a los demas integrantes
+    // Filtrar al usuario actual para mostrar a los demas integrantes
     const otherMemberKeys = memberKeys.filter(uid => {
         if (!currentUser) return true;
         return uid !== currentUser.uid;
     });
 
     if (otherMemberKeys.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:15px; color:var(--text-muted);">No hay otros integrantes conectados aún con esta passphrase.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:18px; color:var(--text-muted); font-size:0.85rem;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <span>No hay otros integrantes conectados aún con esta passphrase.</span>
+            </div>
+        </td></tr>`;
         return;
     }
 
@@ -991,34 +1003,34 @@ function renderMembersTable(moduleName) {
         const m = members[uid];
         const p = m.permissions || {};
         const allowAdd = p.allowAdd !== undefined ? p.allowAdd : true;
-        const allowEdit = p.allowEdit || false;
-        const allowDelete = p.allowDelete || false;
-        const isReadOnly = p.isReadOnly || (!allowAdd && !allowEdit && !allowDelete);
-        const isBlocked = m.isBlocked || false;
+        const allowEdit = p.allowEdit === true;
+        const allowDelete = p.allowDelete === true;
+        const isReadOnly = p.isReadOnly === true || (!allowAdd && !allowEdit && !allowDelete);
+        const isBlocked = m.isBlocked === true;
 
         html += `
             <tr>
-                <td>
-                    <strong>${m.displayName || 'Usuario'}</strong><br>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">${m.email}</span>
+                <td style="padding: 10px 14px;">
+                    <strong style="color:var(--text-color); font-size:0.88rem;">${m.displayName || 'Usuario'}</strong><br>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">${m.email || 'Sin correo'}</span>
                 </td>
-                <td style="text-align:center;">
-                    <input type="checkbox" ${allowAdd && !isReadOnly ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'allowAdd', this.checked)">
+                <td style="text-align:center; padding: 10px 14px;">
+                    <input type="checkbox" style="cursor:pointer; width:16px; height:16px; accent-color:var(--primary-color);" ${allowAdd && !isReadOnly ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'allowAdd', this.checked)">
                 </td>
-                <td style="text-align:center;">
-                    <input type="checkbox" ${allowEdit && !isReadOnly ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'allowEdit', this.checked)">
+                <td style="text-align:center; padding: 10px 14px;">
+                    <input type="checkbox" style="cursor:pointer; width:16px; height:16px; accent-color:var(--primary-color);" ${allowEdit && !isReadOnly ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'allowEdit', this.checked)">
                 </td>
-                <td style="text-align:center;">
-                    <input type="checkbox" ${allowDelete && !isReadOnly ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'allowDelete', this.checked)">
+                <td style="text-align:center; padding: 10px 14px;">
+                    <input type="checkbox" style="cursor:pointer; width:16px; height:16px; accent-color:var(--primary-color);" ${allowDelete && !isReadOnly ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'allowDelete', this.checked)">
                 </td>
-                <td style="text-align:center;">
-                    <input type="checkbox" ${isReadOnly ? 'checked' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'isReadOnly', this.checked)">
+                <td style="text-align:center; padding: 10px 14px;">
+                    <input type="checkbox" style="cursor:pointer; width:16px; height:16px; accent-color:var(--primary-color);" ${isReadOnly ? 'checked' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'isReadOnly', this.checked)">
                 </td>
-                <td style="text-align:center;">
-                    <input type="checkbox" ${isBlocked ? 'checked' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'isBlocked', this.checked)">
+                <td style="text-align:center; padding: 10px 14px;">
+                    <input type="checkbox" style="cursor:pointer; width:16px; height:16px; accent-color:#ef4444;" ${isBlocked ? 'checked' : ''} onchange="updateMemberPermission('${moduleName}', '${uid}', 'isBlocked', this.checked)">
                 </td>
-                <td style="text-align:center;">
-                    <button class="btn-cat-action btn-cat-delete" onclick="removeMember('${moduleName}', '${uid}')" title="Quitar usuario">
+                <td style="text-align:center; padding: 10px 14px;">
+                    <button type="button" class="btn-cat-action btn-cat-delete" onclick="removeMember('${moduleName}', '${uid}')" title="Quitar usuario de este espacio" style="background:rgba(239, 68, 68, 0.12); border:1px solid rgba(239, 68, 68, 0.25); color:#ef4444; border-radius:6px; width:30px; height:30px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -1038,8 +1050,9 @@ window.updateMemberPermission = async function(moduleName, uid, field, value) {
     if (!isOwner) return;
 
     let spaceHash = activeSpace.hash;
-    if (!spaceHash && activeSpace.passphrase) {
-        spaceHash = await hashPassphrase(moduleName, activeSpace.passphrase);
+    const localPass = activeSpace.passphrase || (isTreasury ? localStorage.getItem('treasury_passphrase') : localStorage.getItem('personal_passphrase')) || '';
+    if (!spaceHash && localPass) {
+        spaceHash = await hashPassphrase(moduleName, localPass);
     }
     if (!spaceHash) return;
 
@@ -1067,7 +1080,8 @@ window.updateMemberPermission = async function(moduleName, uid, field, value) {
             }
         }
 
-        const docRef = doc(db, 'shared_' + moduleName, spaceHash);
+        const collectionName = isTreasury ? 'shared_tesoreria' : 'shared_personales';
+        const docRef = doc(db, collectionName, spaceHash);
         await updateDoc(docRef, {
             members: activeSpace.members
         });
@@ -1083,14 +1097,16 @@ window.removeMember = async function(moduleName, uid) {
     if (!isOwner) return;
 
     let spaceHash = activeSpace.hash;
-    if (!spaceHash && activeSpace.passphrase) {
-        spaceHash = await hashPassphrase(moduleName, activeSpace.passphrase);
+    const localPass = activeSpace.passphrase || (isTreasury ? localStorage.getItem('treasury_passphrase') : localStorage.getItem('personal_passphrase')) || '';
+    if (!spaceHash && localPass) {
+        spaceHash = await hashPassphrase(moduleName, localPass);
     }
     if (!spaceHash) return;
 
     if (confirm('¿Deseas remover el acceso a este integrante?')) {
         delete activeSpace.members[uid];
-        const docRef = doc(db, 'shared_' + moduleName, spaceHash);
+        const collectionName = isTreasury ? 'shared_tesoreria' : 'shared_personales';
+        const docRef = doc(db, collectionName, spaceHash);
         await updateDoc(docRef, {
             members: activeSpace.members
         });
@@ -3310,15 +3326,31 @@ function setupEventListeners() {
                     }
                 }
 
+                // Registrar al usuario en los miembros del espacio compartido en Firestore
+                if (!isOwner && effectiveUser && db) {
+                    try {
+                        const collectionName = targetModule === 'tesoreria' ? 'shared_tesoreria' : 'shared_personales';
+                        const spaceDocRef = doc(db, collectionName, hash);
+                        const memberObj = {
+                            email: effectiveUser.email || 'invitado@gmail.com',
+                            displayName: effectiveUser.displayName || (effectiveUser.email ? effectiveUser.email.split('@')[0] : 'Invitado'),
+                            joinedAt: new Date().toISOString(),
+                            isBlocked: false,
+                            permissions: { allowAdd: true, allowEdit: false, allowDelete: false, isReadOnly: false }
+                        };
+                        await setDoc(spaceDocRef, {
+                            members: {
+                                [effectiveUser.uid]: memberObj
+                            }
+                        }, { merge: true });
+                    } catch (regErr) {
+                        console.warn("Aviso al registrar miembro en Firestore:", regErr);
+                    }
+                }
+
                 // Guardar en la lista de accesos guardados del usuario
                 const savedList = userSavedWorkspaces[targetModule] || [];
                 const existingIdx = savedList.findIndex(w => w.hash === hash);
-                const effectiveUser = currentUser || auth.currentUser;
-                const isOwner = spaceData ? (
-                    (spaceData.ownerUid && effectiveUser && spaceData.ownerUid === effectiveUser.uid) ||
-                    (spaceData.ownerEmail && effectiveUser && effectiveUser.email && spaceData.ownerEmail.toLowerCase() === effectiveUser.email.toLowerCase())
-                ) : false;
-
                 const wsEntry = { hash, passphrase: passVal, name, isOwner };
                 if (existingIdx >= 0) {
                     savedList[existingIdx] = { ...savedList[existingIdx], ...wsEntry };
