@@ -3326,6 +3326,12 @@ function setupEventListeners() {
                     }
                 }
 
+                const effectiveUser = currentUser || auth.currentUser;
+                const isOwner = spaceData ? (
+                    (spaceData.ownerUid && effectiveUser && spaceData.ownerUid === effectiveUser.uid) ||
+                    (spaceData.ownerEmail && effectiveUser && effectiveUser.email && spaceData.ownerEmail.toLowerCase() === effectiveUser.email.toLowerCase())
+                ) : false;
+
                 // Registrar al usuario en los miembros del espacio compartido en Firestore
                 if (!isOwner && effectiveUser && db) {
                     try {
