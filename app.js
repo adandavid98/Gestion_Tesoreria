@@ -39,15 +39,21 @@ googleProvider.setCustomParameters({
     prompt: 'select_account'
 });
 
-// Capturar resultado de inicio de sesion por redireccion si se uso como fallback
+// Capturar resultado de inicio de sesion por redireccion (necesario cuando se usa signInWithRedirect)
 getRedirectResult(auth).then((result) => {
     if (result && result.user) {
         console.log("Sesion iniciada por redireccion exitosa:", result.user.email);
     }
 }).catch((error) => {
-    console.error("Error en getRedirectResult:", error);
+    console.error("Error en getRedirectResult:", error.code, error.message);
+    // Mostrar error visible en la pantalla de login
+    const errBox = document.getElementById('login-error-box');
+    if (errBox) {
+        errBox.textContent = 'Error de autenticación: ' + (error.code || error.message);
+        errBox.style.display = 'block';
+    }
     if (error.code === 'auth/unauthorized-domain') {
-        alert('Dominio no autorizado: ' + window.location.hostname + '. Agrega este dominio en Firebase Console > Authentication > Authorized domains.');
+        alert('Dominio no autorizado: ' + window.location.hostname + '.\nAgrega este dominio exacto en Firebase Console > Authentication > Settings > Authorized domains.');
     }
 });
 
@@ -3412,34 +3418,64 @@ function setupEventListeners() {
         `;
 
         btnLoginGoogle.addEventListener('click', async () => {
+            const errBox = document.getElementById('login-error-box');
+            if (errBox) errBox.style.display = 'none';
+
+            btnLoginGoogle.disabled = true;
+            btnLoginGoogle.style.opacity = '0.75';
+            btnLoginGoogle.innerHTML = `
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite; margin-right: 8px;">
+                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+                </svg>
+                Conectando con Google...
+            `;
+
             try {
-                btnLoginGoogle.disabled = true;
-                btnLoginGoogle.style.opacity = '0.75';
+                // Intentar primero con popup (más rápido, sin recarga de página)
+                await signInWithPopup(auth, googleProvider);
+            } catch (popupError) {
+                console.warn("Popup falló:", popupError.code, popupError.message);
+
+                if (popupError.code === 'auth/popup-closed-by-user' || popupError.code === 'auth/cancelled-popup-request') {
+                    // Usuario cerró la ventana voluntariamente — no es un error
+                    btnLoginGoogle.disabled = false;
+                    btnLoginGoogle.style.opacity = '1';
+                    btnLoginGoogle.innerHTML = defaultGoogleBtnHtml;
+                    return;
+                }
+
+                if (popupError.code === 'auth/unauthorized-domain') {
+                    const msg = 'Dominio no autorizado: "' + window.location.hostname + '".\nVe a Firebase Console > Authentication > Settings > Authorized domains y agrega este dominio exacto.';
+                    if (errBox) { errBox.textContent = msg; errBox.style.display = 'block'; }
+                    alert(msg);
+                    btnLoginGoogle.disabled = false;
+                    btnLoginGoogle.style.opacity = '1';
+                    btnLoginGoogle.innerHTML = defaultGoogleBtnHtml;
+                    return;
+                }
+
+                // Popup bloqueado (Brave, Safari, etc.) — intentar con redirección
+                console.warn("Intentando con redirección como alternativa...");
                 btnLoginGoogle.innerHTML = `
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite; margin-right: 8px;">
                         <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
                         <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
                     </svg>
-                    Conectando con Google...
+                    Redirigiendo a Google...
                 `;
-
-                // Usar redirección directa para evitar bloqueos silenciosos de popups en Brave/Safari/Móviles
-                await signInWithRedirect(auth, googleProvider);
-                
-            } catch (error) {
-                console.error("Error al iniciar sesión con Google: ", error);
-                if (error.code === 'auth/unauthorized-domain') {
-                    alert('Dominio no autorizado: ' + window.location.hostname + '. Agrega este dominio en Firebase Console > Authentication > Authorized domains.');
-                } else {
-                    alert('Aviso de Google Sign-In: ' + (error.message || error.code || 'Error al conectar'));
+                try {
+                    await signInWithRedirect(auth, googleProvider);
+                } catch (redirectError) {
+                    console.error("Error en redirección:", redirectError.code, redirectError.message);
+                    const msg = 'Error al conectar con Google: ' + (redirectError.code || redirectError.message || 'Error desconocido');
+                    if (errBox) { errBox.textContent = msg; errBox.style.display = 'block'; }
+                    alert(msg);
+                    btnLoginGoogle.disabled = false;
+                    btnLoginGoogle.style.opacity = '1';
+                    btnLoginGoogle.innerHTML = defaultGoogleBtnHtml;
                 }
-                
-                // Restaurar botón en caso de error inmediato
-                btnLoginGoogle.disabled = false;
-                btnLoginGoogle.style.opacity = '1';
-                btnLoginGoogle.innerHTML = defaultGoogleBtnHtml;
             }
-            // No restauramos el botón en el bloque finally si hay éxito, porque la página se redirigirá.
         });
     }
     
@@ -4338,7 +4374,6 @@ function openArchiveYearModal(moduleName) {
     }
 
     
-    const isTreasury = moduleName === 'tesoreria';
     const sourceList = isTreasury ? transactions : personalExpenses;
     
     const yearsSet = new Set();
